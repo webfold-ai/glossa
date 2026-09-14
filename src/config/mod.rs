@@ -13,7 +13,7 @@ pub struct LingoConfig {
     pub exclude: Vec<String>,
     pub framework: Option<String>,
     pub provider: String,
-    pub output_format: String, // "json", "po", "fluent", "inline"
+    pub output_format: String, // "json", "yaml", "po", "fluent", "android", "ios", "arb", "properties", "xliff", "csv"
     pub locales_dir: String,
 }
 
@@ -23,13 +23,14 @@ impl Default for LingoConfig {
             source_locale: "en".to_string(),
             target_locales: vec!["es".to_string(), "fr".to_string(), "de".to_string()],
             include: vec![
-                "src/**/*.{tsx,jsx,vue,svelte,html,md,json}".to_string(),
+                "src/**/*.{tsx,jsx,vue,svelte,html,md,json,yaml,yml,po,ftl,arb,properties,swift,dart,py,go,rb,php}".to_string(),
             ],
             exclude: vec![
                 "node_modules/**".to_string(),
                 "dist/**".to_string(),
                 ".next/**".to_string(),
                 "target/**".to_string(),
+                ".git/**".to_string(),
             ],
             framework: None,
             provider: "offline".to_string(),
@@ -62,37 +63,70 @@ impl LingoConfig {
         Ok(path)
     }
 
-    /// Auto-detect framework from repository dependencies or files.
-    pub fn detect_framework<P: AsRef<Path>>(dir: P) -> Option<TargetFramework> {
+    /// Auto-detect framework or language from repository dependencies or files.
+    pub fn detect_framework_name<P: AsRef<Path>>(dir: P) -> Option<String> {
         let root = dir.as_ref();
         let pkg_json_path = root.join("package.json");
 
         if pkg_json_path.exists() {
             if let Ok(content) = fs::read_to_string(pkg_json_path) {
                 let lower = content.to_ascii_lowercase();
-                if lower.contains("\"next\"") || lower.contains("\"react\"") {
-                    return Some(TargetFramework::React);
-                } else if lower.contains("\"vue\"") || lower.contains("\"nuxt\"") {
-                    return Some(TargetFramework::Vue);
-                } else if lower.contains("\"svelte\"") || lower.contains("\"@sveltejs/kit\"") {
-                    return Some(TargetFramework::Svelte);
+                if lower.contains("\"next\"") {
+                    return Some("nextjs".to_string());
+                } else if lower.contains("\"react\"") {
+                    return Some("react".to_string());
+                } else if lower.contains("\"nuxt\"") {
+                    return Some("nuxt".to_string());
+                } else if lower.contains("\"vue\"") {
+                    return Some("vue".to_string());
+                } else if lower.contains("\"@sveltejs/kit\"") || lower.contains("\"svelte\"") {
+                    return Some("svelte".to_string());
                 } else if lower.contains("\"solid-js\"") {
-                    return Some(TargetFramework::Solid);
+                    return Some("solid".to_string());
+                } else if lower.contains("\"@angular/core\"") {
+                    return Some("angular".to_string());
+                } else if lower.contains("\"astro\"") {
+                    return Some("astro".to_string());
                 }
             }
         }
 
-        // Fallback: check file existence
-        if root.join("svelte.config.js").exists() {
-            return Some(TargetFramework::Svelte);
+        if root.join("pubspec.yaml").exists() {
+            return Some("flutter".to_string());
         }
-        if root.join("nuxt.config.ts").exists() || root.join("nuxt.config.js").exists() {
-            return Some(TargetFramework::Vue);
+        if root.join("Package.swift").exists() {
+            return Some("swift".to_string());
         }
-        if root.join("next.config.js").exists() || root.join("next.config.mjs").exists() {
-            return Some(TargetFramework::React);
+        if root.join("build.gradle").exists() || root.join("build.gradle.kts").exists() {
+            return Some("android".to_string());
+        }
+        if root.join("requirements.txt").exists() || root.join("pyproject.toml").exists() {
+            return Some("python".to_string());
+        }
+        if root.join("go.mod").exists() {
+            return Some("go".to_string());
+        }
+        if root.join("Gemfile").exists() {
+            return Some("rails".to_string());
+        }
+        if root.join("composer.json").exists() {
+            return Some("laravel".to_string());
+        }
+        if root.join("Cargo.toml").exists() {
+            return Some("rust".to_string());
         }
 
         None
+    }
+
+    /// Auto-detect framework into legacy TargetFramework enum.
+    pub fn detect_framework<P: AsRef<Path>>(dir: P) -> Option<TargetFramework> {
+        match Self::detect_framework_name(dir)?.as_str() {
+            "react" | "nextjs" => Some(TargetFramework::React),
+            "vue" | "nuxt" => Some(TargetFramework::Vue),
+            "svelte" => Some(TargetFramework::Svelte),
+            "solid" => Some(TargetFramework::Solid),
+            _ => None,
+        }
     }
 }

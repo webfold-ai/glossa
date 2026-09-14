@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-09-14T14:48:20.226466049+00:00",
+  "updated_at": "2026-09-14T15:09:35.741129020+00:00",
   "entries": {
     "3725811649908832756": {
       "coord": 3725811649908832756,
@@ -27,6 +27,13 @@
           "translated_hash": 4438038341991445492,
           "provider": "offline",
           "updated_at": "2026-09-14T14:48:20.225806061+00:00",
+          "quality_score": 1.0
+        },
+        "pseudo": {
+          "translated_text": "[!!<0>Ţéåḿ Öṽéřṽîéŵ</0><1>Ţéåḿ {teamName} çûřřéñţḽý ḿåñåĝéš {projectCount} þřöĵéçţš.</1> ~~~~~~~~~~~~~~~~~~~~~!!]",
+          "translated_hash": 15331268162604057015,
+          "provider": "pseudo-engine",
+          "updated_at": "2026-09-14T15:09:35.741014033+00:00",
           "quality_score": 1.0
         }
       }
@@ -57,6 +64,13 @@
           "provider": "offline",
           "updated_at": "2026-09-14T14:48:20.225891411+00:00",
           "quality_score": 1.0
+        },
+        "pseudo": {
+          "translated_text": "[!!<0><0>Öřðéř Çöñƒîřḿåţîöñ</0><1>Ĥéḽḽö {customer_name}, ýöûř öřðéř ĥåš ƀééñ řéçéîṽéð.</1></0> ~~~~~~~~~~~~~~~~~~~~~~!!]",
+          "translated_hash": 12665598182991756266,
+          "provider": "pseudo-engine",
+          "updated_at": "2026-09-14T15:09:35.741055883+00:00",
+          "quality_score": 1.0
         }
       }
     },
@@ -85,6 +99,13 @@
           "translated_hash": 6041761412648222808,
           "provider": "offline",
           "updated_at": "2026-09-14T14:48:20.225935384+00:00",
+          "quality_score": 1.0
+        },
+        "pseudo": {
+          "translated_text": "[!!öƒƒḽîñé ~!!]",
+          "translated_hash": 5960656548598623741,
+          "provider": "pseudo-engine",
+          "updated_at": "2026-09-14T15:09:35.741062228+00:00",
           "quality_score": 1.0
         }
       }
@@ -115,6 +136,13 @@
           "provider": "offline",
           "updated_at": "2026-09-14T14:48:20.225977224+00:00",
           "quality_score": 1.0
+        },
+        "pseudo": {
+          "translated_text": "[!!Éẋþéřîéñçé ţĥé ñéẋţ éṽöḽûţîöñ öƒ ḿûḽţî-ƒřåḿéŵöřƙ ðéṽéḽöþḿéñţ. Řéåð öûř <0>ʠûîçƙšţåřţ ĝûîðé</0> ţö ƀéĝîñ ýöûř ĵöûřñéý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!]",
+          "translated_hash": 8852962854615508470,
+          "provider": "pseudo-engine",
+          "updated_at": "2026-09-14T15:09:35.741073917+00:00",
+          "quality_score": 1.0
         }
       }
     },
@@ -143,6 +171,13 @@
           "translated_hash": 3805438597235811300,
           "provider": "offline",
           "updated_at": "2026-09-14T14:48:20.226052621+00:00",
+          "quality_score": 1.0
+        },
+        "pseudo": {
+          "translated_text": "[!!<0>ĜḽöƀåḽÅþþ</0><1><0>Ŵéḽçöḿé ƀåçƙ, {userName}! Ýöû ĥåṽé {notificationCount} ñöţîƒîçåţîöñš.</0><1></1><2>Ṽîšîţ <0>Šéţţîñĝš</0></2></1> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!]",
+          "translated_hash": 1278202335283538479,
+          "provider": "pseudo-engine",
+          "updated_at": "2026-09-14T15:09:35.741085554+00:00",
           "quality_score": 1.0
         }
       }
@@ -173,6 +208,13 @@
           "provider": "offline",
           "updated_at": "2026-09-14T14:48:20.226131627+00:00",
           "quality_score": 1.0
+        },
+        "pseudo": {
+          "translated_text": "[!!ĵšöñ ~!!]",
+          "translated_hash": 6728055793864574923,
+          "provider": "pseudo-engine",
+          "updated_at": "2026-09-14T15:09:35.741089016+00:00",
+          "quality_score": 1.0
         }
       }
     },
@@ -201,6 +243,13 @@
           "translated_hash": 14554456800717365104,
           "provider": "offline",
           "updated_at": "2026-09-14T14:48:20.226174836+00:00",
+          "quality_score": 1.0
+        },
+        "pseudo": {
+          "translated_text": "[!!ḽöçåḽéš ~!!]",
+          "translated_hash": 4429432119469285974,
+          "provider": "pseudo-engine",
+          "updated_at": "2026-09-14T15:09:35.741092688+00:00",
           "quality_score": 1.0
         }
       }
@@ -231,6 +280,13 @@
           "provider": "offline",
           "updated_at": "2026-09-14T14:48:20.226217344+00:00",
           "quality_score": 1.0
+        },
+        "pseudo": {
+          "translated_text": "[!!Šéåřçĥ řéšöûřçéš ~~~~!!]",
+          "translated_hash": 3508903525592250674,
+          "provider": "pseudo-engine",
+          "updated_at": "2026-09-14T15:09:35.741097245+00:00",
+          "quality_score": 1.0
         }
       }
     },
@@ -259,6 +315,13 @@
           "translated_hash": 1954460083128721173,
           "provider": "offline",
           "updated_at": "2026-09-14T14:48:20.226255972+00:00",
+          "quality_score": 1.0
+        },
+        "pseudo": {
+          "translated_text": "[!!Ŵéḽçöḿé ţö Šöṽéřéîĝñ Çḽöûð ~~~~~~!!]",
+          "translated_hash": 2710220247472287233,
+          "provider": "pseudo-engine",
+          "updated_at": "2026-09-14T15:09:35.741102667+00:00",
           "quality_score": 1.0
         }
       }
@@ -289,6 +352,13 @@
           "provider": "offline",
           "updated_at": "2026-09-14T14:48:20.226285709+00:00",
           "quality_score": 1.0
+        },
+        "pseudo": {
+          "translated_text": "[!!éñ ~!!]",
+          "translated_hash": 10638126379056167307,
+          "provider": "pseudo-engine",
+          "updated_at": "2026-09-14T15:09:35.741105374+00:00",
+          "quality_score": 1.0
         }
       }
     },
@@ -317,6 +387,13 @@
           "translated_hash": 10926427320856134767,
           "provider": "offline",
           "updated_at": "2026-09-14T14:48:20.226369835+00:00",
+          "quality_score": 1.0
+        },
+        "pseudo": {
+          "translated_text": "[!!<0>Ûšéř Þřöƒîḽé</0><1>Ḽöĝĝéð îñ åš {user_name}. Ýöûř šûƀšçřîþţîöñ îš åçţîṽé.</1><2>Ûþĝřåðé ţö <0>Þřö</0></2> ~~~~~~~~~~~~~~~~~~~~~~~~~~~!!]",
+          "translated_hash": 17693707321998397423,
+          "provider": "pseudo-engine",
+          "updated_at": "2026-09-14T15:09:35.741115612+00:00",
           "quality_score": 1.0
         }
       }
@@ -347,6 +424,13 @@
           "provider": "offline",
           "updated_at": "2026-09-14T14:48:20.226420205+00:00",
           "quality_score": 1.0
+        },
+        "pseudo": {
+          "translated_text": "[!!Éðîţ þřöƒîḽé ~~~!!]",
+          "translated_hash": 2577417119695977382,
+          "provider": "pseudo-engine",
+          "updated_at": "2026-09-14T15:09:35.741121021+00:00",
+          "quality_score": 1.0
         }
       }
     },
@@ -375,6 +459,13 @@
           "translated_hash": 8699220908217574751,
           "provider": "offline",
           "updated_at": "2026-09-14T14:48:20.226452324+00:00",
+          "quality_score": 1.0
+        },
+        "pseudo": {
+          "translated_text": "[!!Ðéþḽöý åñýŵĥéřé ŵîţĥ žéřö çöñƒîĝûřåţîöñ. ~~~~~~~~~~!!]",
+          "translated_hash": 8420420616890903738,
+          "provider": "pseudo-engine",
+          "updated_at": "2026-09-14T15:09:35.741128196+00:00",
           "quality_score": 1.0
         }
       }

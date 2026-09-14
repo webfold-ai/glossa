@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="_0__0_Order_Confirmation__0__1_Hello__customer_name___your_order_has_been_received___1___0_">¡&lt;0&gt;&lt;0&gt;Order Confirmation&lt;/0&gt;&lt;1&gt;Hello {customer_name}, your order has been received.&lt;/1&gt;&lt;/0&gt;!</string>
+    <string name="_0_GlobalApp__0__1__0_Welcome_back___userName___You_have__notificationCount__notifications___0__1___1__2_Visit__0_Settings__0___2___1_">¡&lt;0&gt;GlobalApp&lt;/0&gt;&lt;1&gt;&lt;0&gt;Welcome back, {userName}! You have {notificationCount} notifications.&lt;/0&gt;&lt;1&gt;&lt;/1&gt;&lt;2&gt;Visit &lt;0&gt;Settings&lt;/0&gt;&lt;/2&gt;&lt;/1&gt;!</string>
+    <string name="_0_Team_Overview__0__1_Team__teamName__currently_manages__projectCount__projects___1_">¡&lt;0&gt;Team Overview&lt;/0&gt;&lt;1&gt;Team {teamName} currently manages {projectCount} projects.&lt;/1&gt;!</string>
+    <string name="_0_User_Profile__0__1_Logged_in_as__user_name___Your_subscription_is_active___1__2_Upgrade_to__0_Pro__0___2_">¡&lt;0&gt;User Profile&lt;/0&gt;&lt;1&gt;Logged in as {user_name}. Your subscription is active.&lt;/1&gt;&lt;2&gt;Upgrade to &lt;0&gt;Pro&lt;/0&gt;&lt;/2&gt;!</string>
+    <string name="Deploy_anywhere_with_zero_configuration_">¡Deploy anywhere with zero configuration.!</string>
+    <string name="Edit_profile">¡Edit profile!</string>
+    <string name="Experience_the_next_evolution_of_multi_framework_development__Read_our__0_quickstart_guide__0__to_begin_your_journey_">¡Experience the next evolution of multi-framework development. Read our &lt;0&gt;quickstart guide&lt;/0&gt; to begin your journey.!</string>
+    <string name="Search_resources">¡Search resources!</string>
+    <string name="Welcome_to_Sovereign_Cloud">¡Welcome to Sovereign Cloud!</string>
+    <string name="en">¡en!</string>
+    <string name="json">¡json!</string>
+    <string name="locales">¡locales!</string>
+    <string name="offline">¡offline!</string>
+</resources>

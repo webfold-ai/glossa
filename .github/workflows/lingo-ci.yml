@@ -1,0 +1,31 @@
+name: "i18n Localization CI"
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  localization-check:
+    name: "Check Translation Coverage & Placeholders"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run ptyktos-lingo CI
+        uses: Ptyktos/ptyktos-lingo@v1
+        with:
+          fail-on-missing: "true"
+          provider: "openai"
+          api-key: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Auto-Commit & Push if Updated (PR branch)
+        if: github.event_name == 'pull_request' && env.TRANSLATIONS_UPDATED == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add lingo.lock locales/
+          git commit -m "chore(i18n): automated translation update via ptyktos-lingo [skip ci]" || exit 0
+          git push

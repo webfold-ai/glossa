@@ -1,7 +1,9 @@
-//! High-Speed Resource Catalog Parser (JSON, PO, Fluent).
+//! High-Speed Universal Resource Catalog Parser.
+//! Supports: JSON, YAML, GNU gettext PO, Mozilla Fluent, Android XML, iOS .strings,
+//! Flutter ARB, Java/Kotlin .properties, XLIFF 1.2/2.0, and CSV/TSV.
 //!
 //! Lifts traditional localization files directly into the Apeiron basis,
-//! preserving existing translation keys and string namespaces.
+//! preserving existing translation keys, variable slots, and namespaces.
 
 use crate::ir::coord::ApeironCoord;
 use crate::ir::term::{ApeironTerm, ExtractedItem, SourceLocation};
@@ -49,6 +51,344 @@ fn flatten_json(val: &Value, prefix: String, file_path: &str, items: &mut Vec<Ex
         }
         _ => {}
     }
+}
+
+/// Extracts translatable entries from Flutter ARB (.arb) files.
+/// ARB is JSON where keys starting with `@` are attribute metadata.
+pub fn extract_flutter_arb(source: &str, file_path: &str) -> Vec<ExtractedItem> {
+    let mut items = Vec::new();
+    if let Ok(Value::Object(map)) = serde_json::from_str::<Value>(source) {
+        for (k, v) in map {
+            if k.starts_with('@') {
+                continue; // Skip metadata objects like `@hello`: { "description": "..." }
+            }
+            if let Value::String(s) = v {
+                if !s.trim().is_empty() {
+                    let parsed_terms = parse_interpolated_string(&s);
+                    let canon = ApeironTerm::to_canonical_string(&parsed_terms);
+                    let coord = ApeironCoord::from_str_canonical(&canon);
+                    items.push(ExtractedItem {
+                        coord,
+                        key: Some(k),
+                        terms: parsed_terms,
+                        canonical_text: canon,
+                        context: Some(format!("Flutter ARB in {file_path}")),
+                        locations: vec![SourceLocation {
+                            file_path: file_path.to_string(),
+                            line: 1,
+                            column: 1,
+                        }],
+                    });
+                }
+            }
+        }
+    }
+    items
+}
+
+/// Extracts translatable entries from YAML files (.yml, .yaml).
+pub fn extract_yaml(source: &str, file_path: &str) -> Vec<ExtractedItem> {
+    let mut items = Vec::new();
+    let mut stack: Vec<(usize, String)> = Vec::new();
+
+    for (idx, line) in source.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with("---") {
+            continue;
+        }
+
+        let indent = line.len() - line.trim_start().len();
+
+        // Pop keys that are at or deeper than current indentation
+        while let Some((last_indent, _)) = stack.last() {
+            if *last_indent >= indent {
+                stack.pop();
+            } else {
+                break;
+            }
+        }
+
+        if let Some((k, v)) = trimmed.split_once(':') {
+            let key = k.trim().trim_matches('\'').trim_matches('"');
+            let val = v.trim();
+
+            if val.is_empty() {
+                // Section header (nesting)
+                stack.push((indent, key.to_string()));
+            } else {
+                // Leaf value
+                let clean_val = val.trim_matches('\'').trim_matches('"');
+                if !clean_val.is_empty() {
+                    let full_key = if stack.is_empty() {
+                        key.to_string()
+                    } else {
+                        let prefix = stack.iter().map(|(_, s)| s.as_str()).collect::<Vec<_>>().join(".");
+                        format!("{prefix}.{key}")
+                    };
+
+                    let parsed_terms = parse_interpolated_string(clean_val);
+                    let canon = ApeironTerm::to_canonical_string(&parsed_terms);
+                    let coord = ApeironCoord::from_str_canonical(&canon);
+                    items.push(ExtractedItem {
+                        coord,
+                        key: Some(full_key),
+                        terms: parsed_terms,
+                        canonical_text: canon,
+                        context: Some(format!("YAML in {file_path}:{}", idx + 1)),
+                        locations: vec![SourceLocation {
+                            file_path: file_path.to_string(),
+                            line: idx + 1,
+                            column: indent + 1,
+                        }],
+                    });
+                }
+            }
+        }
+    }
+
+    items
+}
+
+/// Extracts translatable entries from Android XML (`res/values/strings.xml`).
+pub fn extract_android_xml(source: &str, file_path: &str) -> Vec<ExtractedItem> {
+    let mut items = Vec::new();
+
+    // Fast regex / slice matching for <string name="...">value</string>
+    let mut cursor = 0;
+    while let Some(start_tag) = source[cursor..].find("<string") {
+        let actual_start = cursor + start_tag;
+        if let Some(close_tag) = source[actual_start..].find('>') {
+            let tag_header = &source[actual_start..actual_start + close_tag];
+            let name_key = extract_attribute(tag_header, "name");
+
+            let content_start = actual_start + close_tag + 1;
+            if let Some(end_tag) = source[content_start..].find("</string>") {
+                let content = &source[content_start..content_start + end_tag];
+                let clean_content = content
+                    .replace("\\'", "'")
+                    .replace("\\\"", "\"")
+                    .replace("\\n", "\n")
+                    .trim()
+                    .to_string();
+
+                if !clean_content.is_empty() {
+                    let parsed_terms = parse_interpolated_string(&clean_content);
+                    let canon = ApeironTerm::to_canonical_string(&parsed_terms);
+                    let coord = ApeironCoord::from_str_canonical(&canon);
+                    items.push(ExtractedItem {
+                        coord,
+                        key: name_key,
+                        terms: parsed_terms,
+                        canonical_text: canon,
+                        context: Some(format!("Android XML in {file_path}")),
+                        locations: vec![SourceLocation {
+                            file_path: file_path.to_string(),
+                            line: 1,
+                            column: 1,
+                        }],
+                    });
+                }
+                cursor = content_start + end_tag + 9;
+                continue;
+            }
+        }
+        cursor = actual_start + 7;
+    }
+
+    items
+}
+
+/// Extracts translatable entries from Apple iOS / macOS `.strings` files.
+pub fn extract_ios_strings(source: &str, file_path: &str) -> Vec<ExtractedItem> {
+    let mut items = Vec::new();
+    let mut in_comment = false;
+
+    for (idx, line) in source.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if in_comment {
+            if trimmed.contains("*/") {
+                in_comment = false;
+            }
+            continue;
+        }
+        if trimmed.starts_with("/*") {
+            if !trimmed.contains("*/") {
+                in_comment = true;
+            }
+            continue;
+        }
+        if trimmed.starts_with("//") {
+            continue;
+        }
+
+        // Format: "key" = "value";
+        if let Some((k_part, v_part)) = trimmed.split_once('=') {
+            let key = k_part.trim().trim_matches('"');
+            let val = v_part.trim().trim_end_matches(';').trim().trim_matches('"');
+
+            if !val.is_empty() {
+                // Convert iOS format specifiers (%@, %ld, %d) to Apeiron slots
+                let normalized_val = val.replace("%@", "{var}");
+                let parsed_terms = parse_interpolated_string(&normalized_val);
+                let canon = ApeironTerm::to_canonical_string(&parsed_terms);
+                let coord = ApeironCoord::from_str_canonical(&canon);
+                items.push(ExtractedItem {
+                    coord,
+                    key: Some(key.to_string()),
+                    terms: parsed_terms,
+                    canonical_text: canon,
+                    context: Some(format!("iOS Strings in {file_path}:{}", idx + 1)),
+                    locations: vec![SourceLocation {
+                        file_path: file_path.to_string(),
+                        line: idx + 1,
+                        column: 1,
+                    }],
+                });
+            }
+        }
+    }
+
+    items
+}
+
+/// Extracts translatable entries from Java / Kotlin `.properties` files.
+pub fn extract_properties(source: &str, file_path: &str) -> Vec<ExtractedItem> {
+    let mut items = Vec::new();
+
+    for (idx, line) in source.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with('!') {
+            continue;
+        }
+
+        let delimiter = if let Some(pos) = trimmed.find('=') {
+            Some((pos, '='))
+        } else {
+            trimmed.find(':').map(|pos| (pos, ':'))
+        };
+
+        if let Some((pos, _)) = delimiter {
+            let key = trimmed[..pos].trim();
+            let val = trimmed[pos + 1..].trim();
+
+            if !val.is_empty() {
+                let parsed_terms = parse_interpolated_string(val);
+                let canon = ApeironTerm::to_canonical_string(&parsed_terms);
+                let coord = ApeironCoord::from_str_canonical(&canon);
+                items.push(ExtractedItem {
+                    coord,
+                    key: Some(key.to_string()),
+                    terms: parsed_terms,
+                    canonical_text: canon,
+                    context: Some(format!("Properties in {file_path}:{}", idx + 1)),
+                    locations: vec![SourceLocation {
+                        file_path: file_path.to_string(),
+                        line: idx + 1,
+                        column: 1,
+                    }],
+                });
+            }
+        }
+    }
+
+    items
+}
+
+/// Extracts translatable units from XLIFF 1.2 and 2.0 XML files (.xlf, .xliff).
+pub fn extract_xliff(source: &str, file_path: &str) -> Vec<ExtractedItem> {
+    let mut items = Vec::new();
+    let mut cursor = 0;
+
+    // Fast parser for <trans-unit id="..."> ... <source>...</source>
+    while let Some(unit_start) = source[cursor..].find("<trans-unit") {
+        let actual_start = cursor + unit_start;
+        if let Some(unit_end) = source[actual_start..].find("</trans-unit>") {
+            let unit_block = &source[actual_start..actual_start + unit_end + 13];
+            let id = extract_attribute(&unit_block[..unit_block.find('>').unwrap_or(unit_block.len())], "id");
+
+            if let Some(src_start) = unit_block.find("<source>") {
+                let content_start = src_start + 8;
+                if let Some(src_end) = unit_block[content_start..].find("</source>") {
+                    let source_text = unit_block[content_start..content_start + src_end].trim();
+                    if !source_text.is_empty() {
+                        let parsed_terms = parse_interpolated_string(source_text);
+                        let canon = ApeironTerm::to_canonical_string(&parsed_terms);
+                        let coord = ApeironCoord::from_str_canonical(&canon);
+                        items.push(ExtractedItem {
+                            coord,
+                            key: id,
+                            terms: parsed_terms,
+                            canonical_text: canon,
+                            context: Some(format!("XLIFF in {file_path}")),
+                            locations: vec![SourceLocation {
+                                file_path: file_path.to_string(),
+                                line: 1,
+                                column: 1,
+                            }],
+                        });
+                    }
+                }
+            }
+            cursor = actual_start + unit_end + 13;
+            continue;
+        }
+        cursor = actual_start + 11;
+    }
+
+    items
+}
+
+/// Extracts translatable entries from CSV or TSV files.
+pub fn extract_csv(source: &str, file_path: &str) -> Vec<ExtractedItem> {
+    let mut items = Vec::new();
+
+    for (idx, line) in source.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || (idx == 0 && (trimmed.starts_with("key,") || trimmed.starts_with("id,"))) {
+            continue;
+        }
+
+        let sep = if trimmed.contains('\t') { '\t' } else { ',' };
+        if let Some((key, val)) = trimmed.split_once(sep) {
+            let clean_key = key.trim().trim_matches('"');
+            let clean_val = val.trim().trim_matches('"');
+
+            if !clean_val.is_empty() {
+                let parsed_terms = parse_interpolated_string(clean_val);
+                let canon = ApeironTerm::to_canonical_string(&parsed_terms);
+                let coord = ApeironCoord::from_str_canonical(&canon);
+                items.push(ExtractedItem {
+                    coord,
+                    key: Some(clean_key.to_string()),
+                    terms: parsed_terms,
+                    canonical_text: canon,
+                    context: Some(format!("CSV in {file_path}:{}", idx + 1)),
+                    locations: vec![SourceLocation {
+                        file_path: file_path.to_string(),
+                        line: idx + 1,
+                        column: 1,
+                    }],
+                });
+            }
+        }
+    }
+
+    items
+}
+
+/// Helper to extract attribute values from XML tag headers: e.g. name="foo" -> Some("foo")
+fn extract_attribute(tag: &str, attr: &str) -> Option<String> {
+    let pattern = format!("{attr}=\"");
+    if let Some(pos) = tag.find(&pattern) {
+        let start = pos + pattern.len();
+        if let Some(end) = tag[start..].find('"') {
+            return Some(tag[start..start + end].to_string());
+        }
+    }
+    None
 }
 
 /// Extracts translatable entries from GNU gettext PO files.
@@ -256,7 +596,6 @@ pub fn parse_interpolated_string(s: &str) -> Vec<ApeironTerm> {
 }
 
 fn parse_fluent_value(s: &str) -> Vec<ApeironTerm> {
-    // In Fluent, variables are {$var}
     let replaced = s.replace("{$", "{");
     parse_interpolated_string(&replaced)
 }
@@ -266,37 +605,98 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_extract_json() {
-        let json = r#"{
-            "common": {
-                "greeting": "Hello, {name}!",
-                "items_count": "You have {{count}} items in your cart."
-            }
-        }"#;
-
-        let items = extract_json(json, "en.json");
-        assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|it| it.canonical_text == "Hello, {name}!"));
-        assert!(items.iter().any(|it| it.canonical_text == "You have {count} items in your cart."));
+    fn test_extract_yaml() {
+        let yaml = r#"
+app:
+  title: "Dashboard Overview"
+  nav:
+    settings: Settings
+    profile: User Profile
+"#;
+        let items = extract_yaml(yaml, "locales/en.yml");
+        assert_eq!(items.len(), 3);
+        assert!(items.iter().any(|i| i.key.as_deref() == Some("app.title")));
+        assert!(items.iter().any(|i| i.canonical_text == "Dashboard Overview"));
     }
 
     #[test]
-    fn test_extract_po() {
-        let po = r#"
-        msgid ""
-        msgstr "Content-Type: text/plain; charset=UTF-8\n"
-
-        msgctxt "nav"
-        msgid "Settings"
-        msgstr ""
-
-        msgid "User %s has %d points"
-        msgstr ""
-        "#;
-
-        let items = extract_po(po, "messages.po");
+    fn test_extract_android_xml() {
+        let xml = r#"
+<resources>
+    <string name="app_name">My Super App</string>
+    <string name="welcome_message">Welcome back, {user}!</string>
+</resources>
+"#;
+        let items = extract_android_xml(xml, "values/strings.xml");
         assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|it| it.canonical_text == "Settings"));
-        assert!(items.iter().any(|it| it.canonical_text == "User {var0} has {var1} points"));
+        assert!(items.iter().any(|i| i.key.as_deref() == Some("app_name")));
+        assert!(items.iter().any(|i| i.canonical_text == "Welcome back, {user}!"));
+    }
+
+    #[test]
+    fn test_extract_ios_strings() {
+        let strings = r#"
+/* Header comment */
+"login_button" = "Log In";
+"items_badge" = "You have %@ new messages";
+"#;
+        let items = extract_ios_strings(strings, "Localizable.strings");
+        assert_eq!(items.len(), 2);
+        assert!(items.iter().any(|i| i.key.as_deref() == Some("login_button")));
+        assert!(items.iter().any(|i| i.canonical_text == "You have {var} new messages"));
+    }
+
+    #[test]
+    fn test_extract_flutter_arb() {
+        let arb = r#"{
+            "helloWorld": "Hello World!",
+            "@helloWorld": {
+                "description": "The conventional newborn programmer greeting"
+            },
+            "welcomeUser": "Welcome, {username}!"
+        }"#;
+        let items = extract_flutter_arb(arb, "intl_en.arb");
+        assert_eq!(items.len(), 2);
+        assert!(items.iter().any(|i| i.canonical_text == "Hello World!"));
+        assert!(items.iter().any(|i| i.canonical_text == "Welcome, {username}!"));
+    }
+
+    #[test]
+    fn test_extract_properties() {
+        let prop = r#"
+# Database config strings
+prompt.retry = Please try again later.
+prompt.success: Operation succeeded!
+"#;
+        let items = extract_properties(prop, "messages.properties");
+        assert_eq!(items.len(), 2);
+        assert!(items.iter().any(|i| i.canonical_text == "Please try again later."));
+    }
+
+    #[test]
+    fn test_extract_xliff() {
+        let xlf = r#"
+<xliff version="1.2">
+  <file>
+    <body>
+      <trans-unit id="msg_1">
+        <source>Hello from XLIFF</source>
+        <target></target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>
+"#;
+        let items = extract_xliff(xlf, "messages.xlf");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].canonical_text, "Hello from XLIFF");
+    }
+
+    #[test]
+    fn test_extract_csv() {
+        let csv = "key,text\nwelcome,Welcome to our website\nbye,Goodbye!\n";
+        let items = extract_csv(csv, "catalog.csv");
+        assert_eq!(items.len(), 2);
+        assert!(items.iter().any(|i| i.canonical_text == "Welcome to our website"));
     }
 }

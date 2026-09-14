@@ -1,0 +1,15 @@
+{
+  "<0><0>Order Confirmation</0><1>Hello {customer_name}, your order has been received.</1></0>": "[!!<0><0>Öřðéř Çöñƒîřḿåţîöñ</0><1>Ĥéḽḽö {customer_name}, ýöûř öřðéř ĥåš ƀééñ řéçéîṽéð.</1></0> ~~~~~~~~~~~~~~~~~~~~~~!!]",
+  "<0>GlobalApp</0><1><0>Welcome back, {userName}! You have {notificationCount} notifications.</0><1></1><2>Visit <0>Settings</0></2></1>": "[!!<0>ĜḽöƀåḽÅþþ</0><1><0>Ŵéḽçöḿé ƀåçƙ, {userName}! Ýöû ĥåṽé {notificationCount} ñöţîƒîçåţîöñš.</0><1></1><2>Ṽîšîţ <0>Šéţţîñĝš</0></2></1> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!]",
+  "<0>Team Overview</0><1>Team {teamName} currently manages {projectCount} projects.</1>": "[!!<0>Ţéåḿ Öṽéřṽîéŵ</0><1>Ţéåḿ {teamName} çûřřéñţḽý ḿåñåĝéš {projectCount} þřöĵéçţš.</1> ~~~~~~~~~~~~~~~~~~~~~!!]",
+  "<0>User Profile</0><1>Logged in as {user_name}. Your subscription is active.</1><2>Upgrade to <0>Pro</0></2>": "[!!<0>Ûšéř Þřöƒîḽé</0><1>Ḽöĝĝéð îñ åš {user_name}. Ýöûř šûƀšçřîþţîöñ îš åçţîṽé.</1><2>Ûþĝřåðé ţö <0>Þřö</0></2> ~~~~~~~~~~~~~~~~~~~~~~~~~~~!!]",
+  "Deploy anywhere with zero configuration.": "[!!Ðéþḽöý åñýŵĥéřé ŵîţĥ žéřö çöñƒîĝûřåţîöñ. ~~~~~~~~~~!!]",
+  "Edit profile": "[!!Éðîţ þřöƒîḽé ~~~!!]",
+  "Experience the next evolution of multi-framework development. Read our <0>quickstart guide</0> to begin your journey.": "[!!Éẋþéřîéñçé ţĥé ñéẋţ éṽöḽûţîöñ öƒ ḿûḽţî-ƒřåḿéŵöřƙ ðéṽéḽöþḿéñţ. Řéåð öûř <0>ʠûîçƙšţåřţ ĝûîðé</0> ţö ƀéĝîñ ýöûř ĵöûřñéý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!]",
+  "Search resources": "[!!Šéåřçĥ řéšöûřçéš ~~~~!!]",
+  "Welcome to Sovereign Cloud": "[!!Ŵéḽçöḿé ţö Šöṽéřéîĝñ Çḽöûð ~~~~~~!!]",
+  "en": "[!!éñ ~!!]",
+  "json": "[!!ĵšöñ ~!!]",
+  "locales": "[!!ḽöçåḽéš ~!!]",
+  "offline": "[!!öƒƒḽîñé ~!!]"
+}

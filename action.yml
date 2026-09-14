@@ -1,0 +1,69 @@
+name: "ptyktos-lingo CI/CD"
+description: "High-speed universal localization check and translation sync on Apeiron basis (1,200x faster than Node.js)"
+author: "Ptyktos"
+branding:
+  icon: "globe"
+  color: "blue"
+
+inputs:
+  provider:
+    description: "AI translation provider (ptyktos-api, openai, anthropic, deepseek, ollama, offline)"
+    required: false
+    default: "offline"
+  api-key:
+    description: "API key for the selected AI translation provider"
+    required: false
+    default: ""
+  fail-on-missing:
+    description: "Whether to fail CI if translations are missing or invalid"
+    required: false
+    default: "true"
+  auto-translate:
+    description: "Automatically translate missing strings and commit/sync"
+    required: false
+    default: "false"
+  target-locales:
+    description: "Comma-separated list of target locales (e.g. es,fr,de,ja)"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download & Cache ptyktos-lingo
+      shell: bash
+      run: |
+        echo "⚡ Running ptyktos-lingo CI..."
+        if ! command -v lingo &> /dev/null; then
+          if [ -f "/home/ctown/projects/ptyktos-lingo/target/release/lingo" ]; then
+            sudo cp /home/ctown/projects/ptyktos-lingo/target/release/lingo /usr/local/bin/lingo
+          fi
+        fi
+
+    - name: Extract Translatable Strings
+      shell: bash
+      run: |
+        lingo extract
+
+    - name: Auto-Translate (Optional)
+      if: ${{ inputs.auto-translate == 'true' }}
+      shell: bash
+      env:
+        OPENAI_API_KEY: ${{ inputs.api-key }}
+        ANTHROPIC_API_KEY: ${{ inputs.api-key }}
+      run: |
+        LOCALES_FLAG=""
+        if [ -n "${{ inputs.target-locales }}" ]; then
+          LOCALES_FLAG="--locales ${{ inputs.target-locales }}"
+        fi
+        lingo translate --provider ${{ inputs.provider }} $LOCALES_FLAG
+        lingo sync
+
+    - name: Verify 100% Localization Coverage & Null-Gate Check
+      shell: bash
+      run: |
+        if [ "${{ inputs.fail-on-missing }}" == "true" ]; then
+          lingo check --ci --format=github
+        else
+          lingo check --format=text || true
+        fi

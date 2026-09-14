@@ -2,6 +2,7 @@
 
 pub mod gate;
 pub mod providers;
+pub mod pseudo;
 
 use async_trait::async_trait;
 use gate::{ApeironNullGate, GateViolation};
