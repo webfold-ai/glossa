@@ -1,0 +1,21 @@
+{
+  "source_locale": "en",
+  "target_locales": [
+    "es",
+    "fr",
+    "de"
+  ],
+  "include": [
+    "src/**/*.{tsx,jsx,vue,svelte,html,md,json}"
+  ],
+  "exclude": [
+    "node_modules/**",
+    "dist/**",
+    ".next/**",
+    "target/**"
+  ],
+  "framework": null,
+  "provider": "offline",
+  "output_format": "json",
+  "locales_dir": "locales"
+}

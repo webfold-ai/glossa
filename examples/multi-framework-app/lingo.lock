@@ -1,0 +1,383 @@
+{
+  "version": 1,
+  "updated_at": "2026-09-14T14:48:20.226466049+00:00",
+  "entries": {
+    "3725811649908832756": {
+      "coord": 3725811649908832756,
+      "source_hash": 3725811649908832756,
+      "canonical_text": "<0>Team Overview</0><1>Team {teamName} currently manages {projectCount} projects.</1>",
+      "context": "Svelte template in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/components/Dashboard.svelte:6",
+      "locales": {
+        "de": {
+          "translated_text": "[DE] <0>Team Overview</0><1>Team {teamName} currently manages {projectCount} projects.</1>",
+          "translated_hash": 521438679163430095,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.225853541+00:00",
+          "quality_score": 1.0
+        },
+        "es": {
+          "translated_text": "¡<0>Team Overview</0><1>Team {teamName} currently manages {projectCount} projects.</1>!",
+          "translated_hash": 17144455010501468266,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.225779696+00:00",
+          "quality_score": 1.0
+        },
+        "fr": {
+          "translated_text": "« <0>Team Overview</0><1>Team {teamName} currently manages {projectCount} projects.</1> »",
+          "translated_hash": 4438038341991445492,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.225806061+00:00",
+          "quality_score": 1.0
+        }
+      }
+    },
+    "4290718697912637839": {
+      "coord": 4290718697912637839,
+      "source_hash": 4290718697912637839,
+      "canonical_text": "<0><0>Order Confirmation</0><1>Hello {customer_name}, your order has been received.</1></0>",
+      "context": "HTML in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/templates/email.html:2",
+      "locales": {
+        "de": {
+          "translated_text": "[DE] <0><0>Order Confirmation</0><1>Hello {customer_name}, your order has been received.</1></0>",
+          "translated_hash": 7714059042177253196,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.225910663+00:00",
+          "quality_score": 1.0
+        },
+        "es": {
+          "translated_text": "¡<0><0>Order Confirmation</0><1>Hello {customer_name}, your order has been received.</1></0>!",
+          "translated_hash": 830125694128656543,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.225873579+00:00",
+          "quality_score": 1.0
+        },
+        "fr": {
+          "translated_text": "« <0><0>Order Confirmation</0><1>Hello {customer_name}, your order has been received.</1></0> »",
+          "translated_hash": 4401099201481214841,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.225891411+00:00",
+          "quality_score": 1.0
+        }
+      }
+    },
+    "4675708673806772264": {
+      "coord": 4675708673806772264,
+      "source_hash": 4675708673806772264,
+      "canonical_text": "offline",
+      "context": "JSON in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/lingo.json",
+      "locales": {
+        "de": {
+          "translated_text": "[DE] offline",
+          "translated_hash": 4068358114666109507,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.225948113+00:00",
+          "quality_score": 1.0
+        },
+        "es": {
+          "translated_text": "¡offline!",
+          "translated_hash": 17692803830856471542,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.225923502+00:00",
+          "quality_score": 1.0
+        },
+        "fr": {
+          "translated_text": "« offline »",
+          "translated_hash": 6041761412648222808,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.225935384+00:00",
+          "quality_score": 1.0
+        }
+      }
+    },
+    "6007101141408479825": {
+      "coord": 6007101141408479825,
+      "source_hash": 6007101141408479825,
+      "canonical_text": "Experience the next evolution of multi-framework development. Read our <0>quickstart guide</0> to begin your journey.",
+      "context": "Markdown in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/docs/welcome.md:7",
+      "locales": {
+        "de": {
+          "translated_text": "[DE] Experience the next evolution of multi-framework development. Read our <0>quickstart guide</0> to begin your journey.",
+          "translated_hash": 3896752044696980566,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.225996832+00:00",
+          "quality_score": 1.0
+        },
+        "es": {
+          "translated_text": "¡Experience the next evolution of multi-framework development. Read our <0>quickstart guide</0> to begin your journey.!",
+          "translated_hash": 3080590773965559349,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.225962788+00:00",
+          "quality_score": 1.0
+        },
+        "fr": {
+          "translated_text": "« Experience the next evolution of multi-framework development. Read our <0>quickstart guide</0> to begin your journey. »",
+          "translated_hash": 9466255666537140283,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.225977224+00:00",
+          "quality_score": 1.0
+        }
+      }
+    },
+    "6343084814903408078": {
+      "coord": 6343084814903408078,
+      "source_hash": 6343084814903408078,
+      "canonical_text": "<0>GlobalApp</0><1><0>Welcome back, {userName}! You have {notificationCount} notifications.</0><1></1><2>Visit <0>Settings</0></2></1>",
+      "context": "JSX in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/components/Header.tsx:5",
+      "locales": {
+        "de": {
+          "translated_text": "[DE] <0>GlobalApp</0><1><0>Welcome back, {userName}! You have {notificationCount} notifications.</0><1></1><2>Visit <0>Settings</0></2></1>",
+          "translated_hash": 4206973519341293815,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226104488+00:00",
+          "quality_score": 1.0
+        },
+        "es": {
+          "translated_text": "¡<0>GlobalApp</0><1><0>Welcome back, {userName}! You have {notificationCount} notifications.</0><1></1><2>Visit <0>Settings</0></2></1>!",
+          "translated_hash": 9556913912124076906,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226024980+00:00",
+          "quality_score": 1.0
+        },
+        "fr": {
+          "translated_text": "« <0>GlobalApp</0><1><0>Welcome back, {userName}! You have {notificationCount} notifications.</0><1></1><2>Visit <0>Settings</0></2></1> »",
+          "translated_hash": 3805438597235811300,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226052621+00:00",
+          "quality_score": 1.0
+        }
+      }
+    },
+    "8300213773967952959": {
+      "coord": 8300213773967952959,
+      "source_hash": 8300213773967952959,
+      "canonical_text": "json",
+      "context": "JSON in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/lingo.json",
+      "locales": {
+        "de": {
+          "translated_text": "[DE] json",
+          "translated_hash": 1976026725553173258,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226144356+00:00",
+          "quality_score": 1.0
+        },
+        "es": {
+          "translated_text": "¡json!",
+          "translated_hash": 1822100520195700129,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226118464+00:00",
+          "quality_score": 1.0
+        },
+        "fr": {
+          "translated_text": "« json »",
+          "translated_hash": 16418978256007696987,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226131627+00:00",
+          "quality_score": 1.0
+        }
+      }
+    },
+    "8384396977786910940": {
+      "coord": 8384396977786910940,
+      "source_hash": 8384396977786910940,
+      "canonical_text": "locales",
+      "context": "JSON in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/lingo.json",
+      "locales": {
+        "de": {
+          "translated_text": "[DE] locales",
+          "translated_hash": 3425244065216985399,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226188579+00:00",
+          "quality_score": 1.0
+        },
+        "es": {
+          "translated_text": "¡locales!",
+          "translated_hash": 3679390113727571298,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226158737+00:00",
+          "quality_score": 1.0
+        },
+        "fr": {
+          "translated_text": "« locales »",
+          "translated_hash": 14554456800717365104,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226174836+00:00",
+          "quality_score": 1.0
+        }
+      }
+    },
+    "10306922296472957132": {
+      "coord": 10306922296472957132,
+      "source_hash": 10306922296472957132,
+      "canonical_text": "Search resources",
+      "context": "Attribute placeholder in input",
+      "locales": {
+        "de": {
+          "translated_text": "[DE] Search resources",
+          "translated_hash": 5471456449091325957,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226228701+00:00",
+          "quality_score": 1.0
+        },
+        "es": {
+          "translated_text": "¡Search resources!",
+          "translated_hash": 4650431949035565964,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226204998+00:00",
+          "quality_score": 1.0
+        },
+        "fr": {
+          "translated_text": "« Search resources »",
+          "translated_hash": 11721516198262164070,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226217344+00:00",
+          "quality_score": 1.0
+        }
+      }
+    },
+    "12687674576948918265": {
+      "coord": 12687674576948918265,
+      "source_hash": 12687674576948918265,
+      "canonical_text": "Welcome to Sovereign Cloud",
+      "context": "Markdown in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/docs/welcome.md:5",
+      "locales": {
+        "de": {
+          "translated_text": "[DE] Welcome to Sovereign Cloud",
+          "translated_hash": 6950303359608884504,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226268490+00:00",
+          "quality_score": 1.0
+        },
+        "es": {
+          "translated_text": "¡Welcome to Sovereign Cloud!",
+          "translated_hash": 6987133274349584299,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226240209+00:00",
+          "quality_score": 1.0
+        },
+        "fr": {
+          "translated_text": "« Welcome to Sovereign Cloud »",
+          "translated_hash": 1954460083128721173,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226255972+00:00",
+          "quality_score": 1.0
+        }
+      }
+    },
+    "13781168655537611762": {
+      "coord": 13781168655537611762,
+      "source_hash": 13781168655537611762,
+      "canonical_text": "en",
+      "context": "JSON in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/lingo.json",
+      "locales": {
+        "de": {
+          "translated_text": "[DE] en",
+          "translated_hash": 5639964813009145007,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226293162+00:00",
+          "quality_score": 1.0
+        },
+        "es": {
+          "translated_text": "¡en!",
+          "translated_hash": 12268698957080925410,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226276789+00:00",
+          "quality_score": 1.0
+        },
+        "fr": {
+          "translated_text": "« en »",
+          "translated_hash": 11833179080376690108,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226285709+00:00",
+          "quality_score": 1.0
+        }
+      }
+    },
+    "13990643290727720955": {
+      "coord": 13990643290727720955,
+      "source_hash": 13990643290727720955,
+      "canonical_text": "<0>User Profile</0><1>Logged in as {user_name}. Your subscription is active.</1><2>Upgrade to <0>Pro</0></2>",
+      "context": "Vue template in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/components/UserProfile.vue:2",
+      "locales": {
+        "de": {
+          "translated_text": "[DE] <0>User Profile</0><1>Logged in as {user_name}. Your subscription is active.</1><2>Upgrade to <0>Pro</0></2>",
+          "translated_hash": 15986297676854247174,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226396418+00:00",
+          "quality_score": 1.0
+        },
+        "es": {
+          "translated_text": "¡<0>User Profile</0><1>Logged in as {user_name}. Your subscription is active.</1><2>Upgrade to <0>Pro</0></2>!",
+          "translated_hash": 9380929228446218405,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226311190+00:00",
+          "quality_score": 1.0
+        },
+        "fr": {
+          "translated_text": "« <0>User Profile</0><1>Logged in as {user_name}. Your subscription is active.</1><2>Upgrade to <0>Pro</0></2> »",
+          "translated_hash": 10926427320856134767,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226369835+00:00",
+          "quality_score": 1.0
+        }
+      }
+    },
+    "18068837058784933692": {
+      "coord": 18068837058784933692,
+      "source_hash": 18068837058784933692,
+      "canonical_text": "Edit profile",
+      "context": "Vue attribute placeholder in button",
+      "locales": {
+        "de": {
+          "translated_text": "[DE] Edit profile",
+          "translated_hash": 6710380979006162333,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226430263+00:00",
+          "quality_score": 1.0
+        },
+        "es": {
+          "translated_text": "¡Edit profile!",
+          "translated_hash": 15276506975569294292,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226408502+00:00",
+          "quality_score": 1.0
+        },
+        "fr": {
+          "translated_text": "« Edit profile »",
+          "translated_hash": 427304545111706574,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226420205+00:00",
+          "quality_score": 1.0
+        }
+      }
+    },
+    "18237465872076511591": {
+      "coord": 18237465872076511591,
+      "source_hash": 18237465872076511591,
+      "canonical_text": "Deploy anywhere with zero configuration.",
+      "context": "Markdown in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/docs/welcome.md:9",
+      "locales": {
+        "de": {
+          "translated_text": "[DE] Deploy anywhere with zero configuration.",
+          "translated_hash": 8676758401736660010,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226465388+00:00",
+          "quality_score": 1.0
+        },
+        "es": {
+          "translated_text": "¡Deploy anywhere with zero configuration.!",
+          "translated_hash": 2928295614428851081,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226441219+00:00",
+          "quality_score": 1.0
+        },
+        "fr": {
+          "translated_text": "« Deploy anywhere with zero configuration. »",
+          "translated_hash": 8699220908217574751,
+          "provider": "offline",
+          "updated_at": "2026-09-14T14:48:20.226452324+00:00",
+          "quality_score": 1.0
+        }
+      }
+    }
+  }
+}

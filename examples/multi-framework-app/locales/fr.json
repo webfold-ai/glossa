@@ -1,0 +1,15 @@
+{
+  "<0><0>Order Confirmation</0><1>Hello {customer_name}, your order has been received.</1></0>": "« <0><0>Order Confirmation</0><1>Hello {customer_name}, your order has been received.</1></0> »",
+  "<0>GlobalApp</0><1><0>Welcome back, {userName}! You have {notificationCount} notifications.</0><1></1><2>Visit <0>Settings</0></2></1>": "« <0>GlobalApp</0><1><0>Welcome back, {userName}! You have {notificationCount} notifications.</0><1></1><2>Visit <0>Settings</0></2></1> »",
+  "<0>Team Overview</0><1>Team {teamName} currently manages {projectCount} projects.</1>": "« <0>Team Overview</0><1>Team {teamName} currently manages {projectCount} projects.</1> »",
+  "<0>User Profile</0><1>Logged in as {user_name}. Your subscription is active.</1><2>Upgrade to <0>Pro</0></2>": "« <0>User Profile</0><1>Logged in as {user_name}. Your subscription is active.</1><2>Upgrade to <0>Pro</0></2> »",
+  "Deploy anywhere with zero configuration.": "« Deploy anywhere with zero configuration. »",
+  "Edit profile": "« Edit profile »",
+  "Experience the next evolution of multi-framework development. Read our <0>quickstart guide</0> to begin your journey.": "« Experience the next evolution of multi-framework development. Read our <0>quickstart guide</0> to begin your journey. »",
+  "Search resources": "« Search resources »",
+  "Welcome to Sovereign Cloud": "« Welcome to Sovereign Cloud »",
+  "en": "« en »",
+  "json": "« json »",
+  "locales": "« locales »",
+  "offline": "« offline »"
+}
