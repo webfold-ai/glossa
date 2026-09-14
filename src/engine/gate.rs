@@ -20,6 +20,9 @@ pub enum GateViolation {
 
     #[error("Security violation: potential script or dangerous HTML injection detected in translation")]
     SecurityRisk { reason: String },
+
+    #[error("Glossary violation: term '{term}' was expected to be translated/preserved as '{expected}'")]
+    GlossaryViolation { term: String, expected: String },
 }
 
 pub struct ApeironNullGate;
@@ -27,6 +30,15 @@ pub struct ApeironNullGate;
 impl ApeironNullGate {
     /// Validates translation against source for slot conservation and markup safety.
     pub fn validate(source_canonical: &str, translated: &str) -> Result<(), GateViolation> {
+        Self::validate_with_glossary(source_canonical, translated, None)
+    }
+
+    /// Validates translation against source for slot conservation, markup safety, and protected glossary keywords.
+    pub fn validate_with_glossary(
+        source_canonical: &str,
+        translated: &str,
+        glossary: Option<&std::collections::BTreeMap<String, String>>,
+    ) -> Result<(), GateViolation> {
         // 1. Check for dangerous HTML injections
         let lower = translated.to_ascii_lowercase();
         if lower.contains("<script") || lower.contains("javascript:") || lower.contains("onerror=") || lower.contains("onload=") {
@@ -59,6 +71,18 @@ impl ApeironNullGate {
             return Err(GateViolation::UnclosedTag {
                 tag: format!("Mismatched tag structure: expected {src_tags:?}, got {trans_tags:?}"),
             });
+        }
+
+        // 4. Check protected glossary brand terms if configured
+        if let Some(gloss) = glossary {
+            for (term, expected) in gloss {
+                if source_canonical.contains(term) && !translated.contains(expected) {
+                    return Err(GateViolation::GlossaryViolation {
+                        term: term.clone(),
+                        expected: expected.clone(),
+                    });
+                }
+            }
         }
 
         Ok(())

@@ -15,6 +15,12 @@ pub struct LingoConfig {
     pub provider: String,
     pub output_format: String, // "json", "yaml", "po", "fluent", "android", "ios", "arb", "properties", "xliff", "csv"
     pub locales_dir: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub glossary: Option<std::collections::BTreeMap<String, String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub brand_tone: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub buckets: Option<Vec<String>>,
 }
 
 impl Default for LingoConfig {
@@ -36,6 +42,9 @@ impl Default for LingoConfig {
             provider: "offline".to_string(),
             output_format: "json".to_string(),
             locales_dir: "locales".to_string(),
+            glossary: None,
+            brand_tone: None,
+            buckets: None,
         }
     }
 }
