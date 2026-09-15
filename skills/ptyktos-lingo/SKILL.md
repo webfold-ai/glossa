@@ -1,6 +1,6 @@
 ---
 name: ptyktos-lingo
-description: 1,300x faster universal multi-framework localization compiler and CI/CD translation engine on Apeiron basis. Automates string extraction, AI translation with Null-Gate verification, lockfile monoid merging, and CI checks.
+description: 2,300x faster, 85%+ cheaper universal multi-framework localization compiler and CI/CD translation engine. Automates string extraction, AI translation with Integrity Gate verification, lockfile monoid merging, and CI checks.
 ---
 
 # ptyktos-lingo Agent Skill
@@ -27,8 +27,8 @@ lingo extract && lingo check --ci
 | Command | Purpose |
 |---|---|
 | `lingo init` | Auto-detects framework, generates `lingo.json` |
-| `lingo extract` | Universal single-pass sweep extracting all translatable strings into canonical `ApeironTerm` |
-| `lingo translate` | Translates missing keys via Anthropic, OpenAI, DeepSeek, Ollama, or Offline provider with Apeiron Null-Gate |
+| `lingo extract` | Universal single-pass sweep extracting all translatable strings into canonical IR (`CanonicalTerm`) |
+| `lingo translate` | Translates missing keys via Anthropic, OpenAI, DeepSeek, Ollama, or Offline provider with Integrity Gate |
 | `lingo check --ci` | CI check: emits GitHub error annotations (`::error ...::`), generates `$GITHUB_STEP_SUMMARY`, exits 1 if keys missing |
 | `lingo diff` | Zero-network translation diff showing added, updated, and missing strings |
 | `lingo pseudo` | Generates pseudo-localized strings with +35% expansion to test UI clipping before paying for LLM tokens |
@@ -38,5 +38,5 @@ lingo extract && lingo check --ci
 
 ## Invariant Safeguards
 
-- **Apeiron Null-Gate**: All translations MUST conserve variable slots (`{user}`, `{{count}}`) and numbered markup tags (`<0>...</0>`). If an LLM drops a placeholder or injects unsafe HTML, the gate kills the item immediately.
-- **Order-Free Lockfile**: `lingo.lock` merges via monoidal commutativity (`Table::fuse`), eliminating Git merge conflicts across parallel feature branches.
+- **Zero-Fault Integrity Gate**: All translations MUST conserve variable slots (`{user}`, `{{count}}`) and numbered markup tags (`<0>...</0>`). If an LLM drops a placeholder or injects unsafe HTML, the gate rejects the item immediately.
+- **Zero Git Merge Conflicts**: `lingo.lock` merges via monoidal commutativity (`Table::fuse`), eliminating Git merge conflicts across parallel feature branches.

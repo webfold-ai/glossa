@@ -1,9 +1,8 @@
-//! The Apeiron Null-Gate: `gate_kills_on_the_cone`.
+//! Translation Integrity Gate.
 //!
-//! Grounded in the theorem `gate_kills_on_the_cone` (Sanguine/UniversalAdapter):
-//! Validates that translations preserve strict boundary invariants.
+//! Validates that translations preserve strict structural invariants.
 //! If an LLM drops a variable, renames a slot, or breaks markup tags,
-//! the translation hits the null gate and is killed immediately.
+//! the translation hits the integrity gate and is rejected immediately.
 
 use thiserror::Error;
 
@@ -25,7 +24,11 @@ pub enum GateViolation {
     GlossaryViolation { term: String, expected: String },
 }
 
+/// Zero-fault translation integrity validation gate.
 pub struct ApeironNullGate;
+
+/// Alias for translation integrity gate.
+pub type IntegrityGate = ApeironNullGate;
 
 impl ApeironNullGate {
     /// Validates translation against source for slot conservation and markup safety.

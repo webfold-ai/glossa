@@ -1,10 +1,10 @@
-//! The Apeiron IR module.
+//! The Intermediate Representation (IR) module.
 
 pub mod coord;
 pub mod term;
 
-pub use coord::{ApeironCoord, PHI64};
+pub use coord::{ApeironCoord, ContentCoord, PHI64};
 pub use term::{
-    normalize_whitespace, ApeironCatalog, ApeironTerm, ExtractedItem, PluralCategory,
+    normalize_whitespace, ApeironCatalog, ApeironTerm, CanonicalTerm, ExtractedItem, PluralCategory,
     SourceLocation,
 };

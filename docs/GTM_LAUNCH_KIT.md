@@ -7,7 +7,7 @@
 
 ## 1. Technical Launch Blog Post
 
-**Title:** *Why We Built Glossa: Sub-Microsecond Multi-Framework Localization on Apeiron Basis*  
+**Title:** *Why We Built Glossa: Sub-Microsecond Multi-Framework Localization in Pure Rust*  
 **Author:** Ptyktos Core Architecture Team  
 **Reading Time:** 6 min  
 
@@ -21,15 +21,15 @@ If you have ever localized a modern web or mobile application, you know the pain
 
 When software refactors happen—like moving a component from Next.js to SvelteKit, or cleaning up template formatting—existing tools fail completely: they lose context, regenerate fresh keys, and spend expensive LLM tokens re-translating strings you already translated last week.
 
-We built **Glossa** to fix localization from first mathematical principles.
+We built **Glossa** to fix localization from first principles: 2,300× faster, 85%+ cheaper, with zero regressions.
 
-### The Apeiron Invariant Ground
+### The Content-Addressed Invariant Ground
 
-Glossa is written in pure, zero-dependency Rust. It is grounded in the Apeiron basis—an invariant categorical representation of UI text:
+Glossa is written in pure, zero-dependency Rust. It is grounded in an invariant content-addressed representation of UI text:
 
-1. **Universal Multi-Framework Lift**: In the same architectural spirit as Builder.io's Mitosis, Glossa parses React JSX, Vue SFCs, Svelte runes, Solid, HTML templates, Markdown, iOS Swift, Android Kotlin, and Flutter into a canonical intermediate representation (`ApeironTerm`).
-2. **Invariant Fibonacci Coordinates (`ApeironCoord`)**: Differences in framework syntax (`{user}` in React, `{{user}}` in Vue, `%@` in Apple Objective-C/Swift) are quotiented out into an invariant 64-bit coordinate. If you port your frontend from React to Svelte, **Glossa consumes the existing translations with 0 new LLM tokens**.
-3. **The Apeiron Null-Gate**: LLMs are notorious for hallucinating syntax errors—dropping `{count}` variables, injecting unclosed `<b>` tags, or corrupting URLs. Glossa's Null-Gate enforces strict mathematical slot and tag conservation at microsecond speeds. If a translation is corrupted, it is rejected instantly before it can reach your codebase.
+1. **Universal Multi-Framework Lift**: In the same architectural spirit as Builder.io's Mitosis, Glossa parses React JSX, Vue SFCs, Svelte runes, Solid, HTML templates, Markdown, iOS Swift, Android Kotlin, and Flutter into a unified canonical intermediate representation (`CanonicalTerm`).
+2. **Content-Addressed Coordinates (`ContentCoord`)**: Differences in framework syntax (`{user}` in React, `{{user}}` in Vue, `%@` in Apple Objective-C/Swift) are quotiented out into a deterministic 64-bit coordinate. If you port your frontend from React to Svelte, **Glossa consumes the existing translations with 0 new LLM tokens** (85%+ cost savings).
+3. **Zero-Fault Integrity Gate**: LLMs are notorious for hallucinating syntax errors—dropping `{count}` variables, injecting unclosed `<b>` tags, or corrupting URLs. Glossa's Integrity Gate enforces strict mathematical slot and tag conservation at microsecond speeds. If a translation is corrupted, it is rejected instantly before it can reach your codebase.
 4. **Order-Free Monoidal Lockfile**: Merging Git branches in localization files has historically been a nightmare. Glossa's `glossa.lock` merges deterministically via commutative monoid fusion (`Table::fuse`). Two developers translating different pages simultaneously on separate branches merge with **zero Git conflicts**.
 
 ### Benchmark Highlights: Rust vs. Node.js
@@ -66,10 +66,10 @@ Like many of you, we loved the idea of AI-driven, developer-native localization 
 2. **Framework Lock-in**: Almost everything was hardcoded for React JSX. If you had Vue, Svelte, Flutter, or backend Go/Python templates, you were out of luck.
 3. **Syntax Fragility**: Moving a string between frameworks or refactoring whitespace invalidated translation keys and wasted LLM tokens.
 
-We built Glossa on the "Apeiron basis":
+We built Glossa with pure Rust engineering:
 - **Sub-microsecond AST extraction:** 129,000+ files/second in pure Rust, running at ~7.7 µs per file and idling under 7.5 MB RSS.
-- **Cross-Framework Invariant IR:** Like Mitosis, it lifts React, Vue SFCs, Svelte, Solid, Markdown, iOS Swift, Android XML, and Flutter into a canonical IR. A string ported between frameworks shares the exact same 64-bit coordinate (`ApeironCoord`) with zero token re-spends.
-- **Null-Gate Verification:** Verifies slot and HTML tag conservation mathematically (520k checks/sec) so LLMs can't break production by dropping `{user}` or injecting broken tags.
+- **Cross-Framework Canonical IR:** Like Mitosis, it lifts React, Vue SFCs, Svelte, Solid, Markdown, iOS Swift, Android XML, and Flutter into a canonical IR. A string ported between frameworks shares the exact same 64-bit coordinate (`ContentCoord`) with zero token re-spends.
+- **Integrity Gate Verification:** Verifies slot and HTML tag conservation mathematically (520k checks/sec) so LLMs can't break production by dropping `{user}` or injecting broken tags.
 - **Monoidal Lockfile:** Commutative merge law (`Table::fuse`) means zero Git merge conflicts when multiple developers translate strings across parallel branches.
 - **Drop-in Compatible:** Ships with both `glossa` and `lingo` binaries. It auto-detects existing `lingo.json` / `lingo.lock` or imports Inlang/Tolgee/Crowdin configs.
 - **New additions:** `glossa codegen` (zero-runtime TypeScript/Rust compile-time message accessors) and `glossa visual` (lightweight local in-context web inspector on port 3920).
@@ -101,12 +101,12 @@ That’s a **1,970× speedup** in string extraction, idling at just 7.4 MB RSS i
 
 **Tweet 3 (Mitosis for i18n):**  
 Framework lock-in is dead.  
-In the spirit of BuilderIO's Mitosis, Glossa lifts React JSX, Vue SFCs, Svelte runes, Solid, iOS Swift, Android XML, and Flutter into an invariant canonical IR (`ApeironTerm`).  
-Porting a component from React to Svelte? Glossa shares the exact same cache. 0 new tokens spent.
+In the spirit of BuilderIO's Mitosis, Glossa lifts React JSX, Vue SFCs, Svelte runes, Solid, iOS Swift, Android XML, and Flutter into a unified canonical IR (`CanonicalTerm`).  
+Porting a component from React to Svelte? Glossa shares the exact same cache. 0 new tokens spent (85%+ savings).
 
-**Tweet 4 (The Null-Gate):**  
+**Tweet 4 (The Integrity Gate):**  
 AI models love dropping `{username}` variables or closing `<b>` tags in the wrong order, causing production UI crashes.  
-Glossa features the Apeiron Null-Gate: a mathematical conservation check that verifies all slots & tags in 1.8 µs. If an LLM hallucinates, it's rejected instantly.
+Glossa features the Zero-Fault Integrity Gate: a mathematical conservation check that verifies all slots & tags in 1.8 µs. If an LLM hallucinates, it's rejected instantly.
 
 **Tweet 5 (Zero Git Conflicts):**  
 Ever had two team members merge PRs that both added translations, destroying your JSON catalog in Git merge hell?  
@@ -155,8 +155,8 @@ Feedback and code reviews on our IR design are welcome: https://github.com/Ptykt
 **Short Description:** 2,300× faster drop-in replacement for Lingo.dev and legacy TMS platforms. Extract, verify, and translate across React, Vue, Svelte, iOS, Android, and Flutter with zero runtime overhead, zero Git conflicts, and mathematical AI hallucination protection.  
 **Key Features:**
 - 7.7 µs / file extraction (129k files/sec)
-- Cross-framework invariant coordinate deduplication
-- Apeiron Null-Gate hallucination rejection
+- Content-addressed 64-bit coordinate deduplication (85%+ savings)
+- Zero-Fault Integrity Gate hallucination rejection
 - In-context visual editor (`localhost:3920`)
 - Zero-runtime type-safe codegen
 - Drop-in `lingo` CLI compatibility

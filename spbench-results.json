@@ -20,7 +20,7 @@
       "speedup_vs_incumbent": 1973.5133731498313
     },
     {
-      "name": "Apeiron Coordinate & Lockfile Merge (Table::fuse)",
+      "name": "Content-Addressed Coordinate & Lockfile Merge (Table::fuse)",
       "count": 4000,
       "total_ms": 0.380515,
       "throughput_per_sec": 10512069.169415135,
@@ -32,7 +32,7 @@
       "speedup_vs_incumbent": 450.0
     },
     {
-      "name": "Apeiron Null-Gate Adversarial Integrity",
+      "name": "Zero-Fault Integrity Gate Adversarial Integrity",
       "count": 2000,
       "total_ms": 2.3256599999999996,
       "throughput_per_sec": 859970.9329824653,

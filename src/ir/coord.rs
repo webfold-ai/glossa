@@ -1,11 +1,11 @@
-//! Apeiron Coordinate and Invariant Hash Calculation.
+//! Content-addressed Coordinate and Invariant Hash Calculation.
 //!
-//! Grounded in the Apeiron basis: every translatable unit, regardless of surface
-//! framework syntax (React, Vue, Svelte, Jinja, Fluent, PO), projects to an
-//! invariant coordinate `ApeironCoord`.
+//! Every translatable unit, regardless of surface framework syntax
+//! (React, Vue, Svelte, Jinja, Fluent, PO), projects to a deterministic
+//! invariant 64-bit coordinate `ContentCoord`.
 //!
-//! Uses Fibonacci hashing (`k * PHI`, golden ratio `0x9E3779B97F4A7C15`)
-//! aligned with `hashtrinity`.
+//! Uses Fibonacci dispersion (`k * PHI`, golden ratio `0x9E3779B97F4A7C15`)
+//! for optimal hash distribution.
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -13,9 +13,12 @@ use std::fmt;
 /// Golden ratio constant phi on 2^64: 2^64 / 1.61803398874989484820...
 pub const PHI64: u64 = 0x9e3779b97f4a7c15;
 
-/// Deterministic 64-bit coordinate identifying an Apeiron invariant term.
+/// Deterministic 64-bit content-addressed coordinate identifying an invariant term.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct ApeironCoord(pub u64);
+
+/// Alias for ContentCoord representing deterministic content-addressed 64-bit coordinate.
+pub type ContentCoord = ApeironCoord;
 
 impl ApeironCoord {
     /// Compute the Apeiron coordinate from raw bytes via 64-bit Fibonacci fold.

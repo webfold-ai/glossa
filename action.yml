@@ -1,5 +1,5 @@
 name: "Glossa Universal Localization CI/CD"
-description: "Sub-microsecond universal multi-framework localization check and translation sync on Apeiron basis (2,300x faster than Node.js, drop-in replacement for Lingo.dev)"
+description: "Ultra-fast sovereign multi-framework localization verification and translation engine (2,300x faster than Node.js, 85%+ cheaper drop-in replacement for Lingo.dev)"
 author: "Ptyktos"
 branding:
   icon: "globe"

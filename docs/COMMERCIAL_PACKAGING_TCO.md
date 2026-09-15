@@ -12,7 +12,7 @@ In modern software organizations, localization (i18n / l10n) incurs a dual tax:
 
 **Glossa eliminates both taxes completely**:
 - **7.4 MB pure Rust binary** running in 7.7 microseconds per file (2,300× faster CI).
-- **Apeiron invariant coordinates (`ApeironCoord`)**: Refactoring code or switching frameworks results in **0 token re-spends**.
+- **Content-addressed 64-bit coordinates (`ContentCoord`)**: Refactoring code or switching frameworks results in **0 token re-spends** (85%+ translation cost savings).
 - **Sovereign air-gapped node**: Run local LLMs (Ollama / vLLM / Ptyktos API) inside private VPCs with **$0 per-seat SaaS tax**.
 
 ---
@@ -29,10 +29,10 @@ In modern software organizations, localization (i18n / l10n) incurs a dual tax:
 | Cost Element | Legacy TMS (Crowdin / Lokalise) | First-Gen AI (Lingo.dev) | **Glossa Sovereign** |
 |---|---|---|---|
 | **Platform Seat Subscriptions** | $25,200 / yr ($60/seat/mo × 35 seats) | $0 (CLI open core) | **$0** (Open Core) / **$5,988/yr** (Enterprise Node) |
-| **LLM Translation API Spend** | $0 (Human translators paid extra) | $14,400 / yr (redundant invalidations) | **$1,800 / yr** (Apeiron coordinate deduplication) |
+| **LLM Translation API Spend** | $0 (Human translators paid extra) | $14,400 / yr (redundant invalidations) | **$1,800 / yr** (Content-addressed deduplication) |
 | **CI Runner Compute Minutes** | $4,800 / yr (Slow Node webhooks/polling) | $6,200 / yr (Node/Babel AST sweeps) | **$120 / yr** (Sub-second Rust CI sweeps) |
 | **Git Conflict Engineering Drag** | $12,000 / yr (~2 hrs/week senior dev time) | $9,600 / yr (JSON lockfile conflicts) | **$0** (Commutative monoid `Table::fuse`) |
-| **Translation Quality Incident Remediation** | $8,000 / yr (Corrupted placeholder bugs) | $4,500 / yr (Prompt-injection / dropped tags) | **$0** (Apeiron Null-Gate mathematical guarantee) |
+| **Translation Quality Incident Remediation** | $8,000 / yr (Corrupted placeholder bugs) | $4,500 / yr (Prompt-injection / dropped tags) | **$0** (Integrity Gate zero-fault guarantee) |
 | **Total Annual Cost** | **$50,000 / year** | **$34,700 / year** | **$1,920 – $7,908 / year** |
 | **NET ANNUAL SAVINGS** | Baseline | **$15,300 saved** | **$42,092 – $48,080 saved (84% – 96% reduction)** |
 
@@ -86,7 +86,7 @@ Glossa is structured under an **Open-Core & Sovereign Enterprise** monetization 
 │                         Free & Open Source                              │
 │ • Full CLI (`glossa` & `lingo` aliases)                                 │
 │ • Universal AST Sweepers (React, Vue, Svelte, iOS, Android, Flutter)   │
-│ • Apeiron Null-Gate Verification                                        │
+│ • Zero-Fault Integrity Gate Verification                                │
 │ • Local Lockfile with Commutative Monoid Merge                          │
 │ • Zero-Runtime Type-Safe Codegen (`glossa codegen`)                     │
 │ • Embedded In-Context Visual Studio (`glossa visual`)                   │
@@ -96,7 +96,7 @@ Glossa is structured under an **Open-Core & Sovereign Enterprise** monetization 
                  ┌───────────────────┴───────────────────┐
                  ▼                                       ▼
 ┌─────────────────────────────────┐   ┌───────────────────────────────────┐
-│     MANAGED APEIRON CLOUD       │   │    SOVEREIGN ENTERPRISE NODE      │
+│      MANAGED GLOSSA CLOUD       │   │    SOVEREIGN ENTERPRISE NODE      │
 │      $29 / developer / month    │   │         $499 / org / month        │
 │                                 │   │                                   │
 │ • Centralized Lorelake S3 Cache │   │ • 100% Air-Gapped / Sovereign VPC │
@@ -112,10 +112,10 @@ Glossa is structured under an **Open-Core & Sovereign Enterprise** monetization 
 
 #### 1. Glossa Community (Open Core - $0)
 - **License**: Apache 2.0 / MIT.
-- **Capabilities**: Full binary suite (`glossa`, `lingo`), all framework parsers, Null-Gate, local lockfiles, zero-runtime codegen, and in-context visual server.
+- **Capabilities**: Full binary suite (`glossa`, `lingo`), all framework parsers, Integrity Gate, local lockfiles, zero-runtime codegen, and in-context visual server.
 - **Target**: Individual developers, startups, open-source maintainers.
 
-#### 2. Managed Apeiron Cloud ($29 / developer / mo)
+#### 2. Managed Glossa Cloud ($29 / developer / mo)
 - **Shared Coordinate Lakehouse**: Connects your local lockfiles to the global Lorelake S3 coordinate store. If another team in your organization already translated a shared button, your project consumes it instantly with zero token cost.
 - **Collaborative Web Workspace**: Non-technical product managers, copywriters, and translators can review and override strings through an ultra-fast web UI.
 - **Automated Webhook Sync**: Continuous synchronization with staging and production environments.

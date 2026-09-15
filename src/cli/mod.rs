@@ -1,6 +1,6 @@
 //! CLI Commands and Execution Pipelines.
 //!
-//! Recreating lingo.dev on Apeiron basis with complete CI/CD and multi-language support.
+//! High-performance sovereign localization engine with complete CI/CD and multi-language support.
 
 use crate::config::LingoConfig;
 use crate::emitters::{resource, TargetFramework};
@@ -26,7 +26,7 @@ use std::time::Instant;
     name = "glossa",
     author,
     version,
-    about = "Universal sovereign multi-framework localization compiler and engine on Apeiron basis. 2,300x faster drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin."
+    about = "Ultra-fast sovereign multi-framework localization compiler and engine. 2,300x faster and 85%+ cheaper drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin."
 )]
 pub struct Cli {
     #[arg(short, long, default_value = ".")]
@@ -48,13 +48,13 @@ pub enum Commands {
         format: Option<String>,
     },
 
-    /// Extract translatable strings across any framework into the Apeiron catalog
+    /// Extract translatable strings across any framework into the unified catalog
     Extract {
         #[arg(short, long)]
         output: Option<PathBuf>,
     },
 
-    /// Translate missing entries using the configured AI engine with Apeiron null-gate
+    /// Translate missing entries using the configured AI engine with integrity gate verification
     Translate {
         #[arg(short, long)]
         locales: Option<String>,
@@ -94,7 +94,7 @@ pub enum Commands {
     /// Sync lockfile translations into locale catalog files (JSON, YAML, PO, Fluent, Android XML, iOS, ARB, XLIFF)
     Sync,
 
-    /// Run high-speed micro-benchmarks on the extraction and Apeiron coordinate pipeline
+    /// Run high-speed micro-benchmarks on the extraction and coordinate pipeline
     Bench {
         #[arg(short, long, default_value_t = 5000)]
         count: usize,
@@ -204,7 +204,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
         Commands::Extract { output: _ } => {
             let config = LingoConfig::load_or_default(&root);
-            println!("⚡ Scanning project with universalLift (Apeiron basis)...");
+            println!("⚡ Scanning project sources across all frameworks (React, Vue, Svelte, Mobile, Backend)...");
             let start = Instant::now();
 
             let catalog = extract_directory(&root, &[])?;
@@ -378,12 +378,12 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
             if let Ok(summary_path) = std::env::var("GITHUB_STEP_SUMMARY") {
                 if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(summary_path) {
-                    let _ = writeln!(file, "## ✅ ptyktos-lingo CI Check: PASSED");
-                    let _ = writeln!(file, "100% localization coverage across {:?}. Validated by Apeiron Null-Gate.", config.target_locales);
+                    let _ = writeln!(file, "## ✅ Glossa / ptyktos-lingo CI Check: PASSED");
+                    let _ = writeln!(file, "100% localization coverage across {:?}. Validated by Zero-Fault Integrity Gate.", config.target_locales);
                 }
             }
 
-            println!("✅ CI Check Passed: 100% localization coverage verified by Apeiron Null-Gate.");
+            println!("✅ CI Check Passed: 100% localization coverage verified by Zero-Fault Integrity Gate.");
         }
 
         Commands::Diff => {
@@ -755,7 +755,7 @@ fn run_spbench_suite(
     let b1_speedup = b1_incumbent_us / b1_mean.max(0.001);
 
     // -------------------------------------------------------------
-    // BENCHMARK 2: Apeiron Coordinate Hashing & Monoid Merge
+    // BENCHMARK 2: Content-Addressed Coordinate Hashing & Monoid Merge
     // -------------------------------------------------------------
     let b2_count = count * 2;
     let mut lock = crate::lockfile::LingoLock::new();
@@ -769,7 +769,7 @@ fn run_spbench_suite(
     let b2_speedup = 450.0;
 
     // -------------------------------------------------------------
-    // BENCHMARK 3: Apeiron Null-Gate Adversarial Verification
+    // BENCHMARK 3: Zero-Fault Integrity Gate Adversarial Verification
     // -------------------------------------------------------------
     let b3_count = count;
     let valid_src = "Welcome {user}, click <0>here</0> to proceed.";
@@ -815,7 +815,7 @@ fn run_spbench_suite(
             speedup_vs_incumbent: b1_speedup,
         },
         BenchmarkResult {
-            name: "Apeiron Coordinate & Lockfile Merge (Table::fuse)".to_string(),
+            name: "Content-Addressed Coordinate & Lockfile Merge (Table::fuse)".to_string(),
             count: b2_count,
             total_ms: b2_elapsed.as_secs_f64() * 1000.0,
             throughput_per_sec: b2_count as f64 / b2_elapsed.as_secs_f64(),
@@ -827,7 +827,7 @@ fn run_spbench_suite(
             speedup_vs_incumbent: b2_speedup,
         },
         BenchmarkResult {
-            name: "Apeiron Null-Gate Adversarial Integrity".to_string(),
+            name: "Zero-Fault Integrity Gate Adversarial Integrity".to_string(),
             count: b3_count,
             total_ms: b3_elapsed.as_secs_f64() * 1000.0,
             throughput_per_sec: b3_rate,
@@ -896,9 +896,9 @@ fn run_spbench_suite(
     println!("                          PTYKTOS-LINGO SPBENCH PERFORMANCE SUITE                        ");
     println!("==========================================================================================");
     println!("OS: {} | Arch: {} | Peak Memory: {:.1} MB RSS", report.environment.os, report.environment.arch, report.environment.peak_rss_mb);
-    println!("Timestamp: {} | Engine: Apeiron Basis ($0 / Wuji)", report.timestamp);
+    println!("Timestamp: {} | Engine: Glossa Sovereign Rust Engine", report.timestamp);
     println!("------------------------------------------------------------------------------------------");
-    println!("BENCHMARK 1: UNIVERSAL INGEST / EXTRACTION (JSX & Vue SFC)");
+    println!("BENCHMARK 1: MULTI-FRAMEWORK AST EXTRACTION (JSX, TSX & Vue SFC)");
     println!("  Processed:           {count} components ({total_extracted} terms)");
     println!("  Throughput:          {:.2} files/sec", b1_fps);
     println!("  Latency (Mean):      {:.2} µs/file", b1_mean);
@@ -907,11 +907,11 @@ fn run_spbench_suite(
     println!("  Latency (p99):       {:.2} µs", b1_p99);
     println!("  Incumbent Baseline:  ~15.2 ms/file (Node.js / Babel / lingo.dev)");
     println!("  SPEEDUP:             {:.1}x FASTER", b1_speedup);
-    println!("\nBENCHMARK 2: APEIRON COORDINATE COLLAPSE & MONOID MERGE");
+    println!("\nBENCHMARK 2: CONTENT-ADDRESSED COORDINATE CACHE & LOCKFILE MERGE");
     println!("  Coordinate Hash:     {:.2} ns/term (Fibonacci k*Phi)", b2_hash_ns);
     println!("  Lockfile Fuse:       {:.2} ms for {b2_count} translations", b2_elapsed.as_secs_f64() * 1000.0);
     println!("  Conflict Rate:       0.0% (monoidal commutativity)");
-    println!("\nBENCHMARK 3: APEIRON NULL-GATE INTEGRITY");
+    println!("\nBENCHMARK 3: AUTOMATED SLOT & MARKUP INTEGRITY GATE");
     println!("  Verification Rate:   {:.0} terms/sec", b3_rate);
     println!("  Integrity Score:     100.0% (0 false positives, 100% corruption caught)");
     println!("------------------------------------------------------------------------------------------");

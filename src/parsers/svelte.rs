@@ -56,6 +56,15 @@ fn is_container_tag(tag: &str) -> bool {
 
 pub fn extract_svelte(source: &str, file_path: &str) -> Vec<ExtractedItem> {
     let mut items = Vec::new();
+    let mut seen_coords = std::collections::BTreeSet::new();
+
+    // 1. Extract script translation calls (t('...'), etc.)
+    let code_items = crate::parsers::code::extract_code_strings(source, file_path);
+    for item in code_items {
+        if seen_coords.insert(item.coord) {
+            items.push(item);
+        }
+    }
 
     let cleaned = strip_blocks(source, &["script", "style"]);
 
@@ -75,7 +84,7 @@ pub fn extract_svelte(source: &str, file_path: &str) -> Vec<ExtractedItem> {
 
         if chars[idx] == '<' && idx + 1 < len && chars[idx + 1].is_ascii_alphabetic() {
             if let Some((new_idx, node)) = parse_svelte_element_node(&chars, idx, &mut line, &mut col) {
-                collect_svelte_items(&node, file_path, &mut items);
+                collect_svelte_items(&node, file_path, &mut items, &mut seen_coords);
                 idx = new_idx;
                 continue;
             }
@@ -107,7 +116,12 @@ fn strip_blocks(source: &str, tags: &[&str]) -> String {
     res
 }
 
-fn collect_svelte_items(node: &SvelteNode, file_path: &str, items: &mut Vec<ExtractedItem>) {
+fn collect_svelte_items(
+    node: &SvelteNode,
+    file_path: &str,
+    items: &mut Vec<ExtractedItem>,
+    seen_coords: &mut std::collections::BTreeSet<ApeironCoord>,
+) {
     if let SvelteNode::Element {
         tag,
         line,
@@ -118,21 +132,26 @@ fn collect_svelte_items(node: &SvelteNode, file_path: &str, items: &mut Vec<Extr
     {
         for (attr_name, attr_val) in attrs {
             if TRANSLATABLE_ATTRS.contains(&attr_name.as_str()) && !attr_val.trim().is_empty() {
-                let trimmed = attr_val.trim().to_string();
-                let canon = trimmed.clone();
-                let coord = ApeironCoord::from_str_canonical(&canon);
-                items.push(ExtractedItem {
-                    coord,
-                    key: None,
-                    terms: vec![ApeironTerm::Text(trimmed)],
-                    canonical_text: canon,
-                    context: Some(format!("Svelte attribute {attr_name} in <{tag}>")),
-                    locations: vec![SourceLocation {
-                        file_path: file_path.to_string(),
-                        line: *line,
-                        column: *col,
-                    }],
-                });
+                let clean_val = crate::parsers::code::extract_literal_from_call(attr_val)
+                    .unwrap_or_else(|| attr_val.trim().to_string());
+                if !clean_val.trim().is_empty() {
+                    let canon = clean_val.clone();
+                    let coord = ApeironCoord::from_str_canonical(&canon);
+                    if seen_coords.insert(coord) {
+                        items.push(ExtractedItem {
+                            coord,
+                            key: None,
+                            terms: vec![ApeironTerm::Text(clean_val)],
+                            canonical_text: canon,
+                            context: Some(format!("Svelte attribute {attr_name} in <{tag}>")),
+                            locations: vec![SourceLocation {
+                                file_path: file_path.to_string(),
+                                line: *line,
+                                column: *col,
+                            }],
+                        });
+                    }
+                }
             }
         }
 
@@ -141,24 +160,26 @@ fn collect_svelte_items(node: &SvelteNode, file_path: &str, items: &mut Vec<Extr
         if is_container_tag(tag) && has_child_elements {
             for child in children {
                 match child {
-                    SvelteNode::Element { .. } => collect_svelte_items(child, file_path, items),
+                    SvelteNode::Element { .. } => collect_svelte_items(child, file_path, items, seen_coords),
                     SvelteNode::Text(t) => {
                         let norm = normalize_whitespace(t);
                         if !norm.trim().is_empty() && norm.chars().any(|c| c.is_alphanumeric()) {
                             let canon = norm.clone();
                             let coord = ApeironCoord::from_str_canonical(&canon);
-                            items.push(ExtractedItem {
-                                coord,
-                                key: None,
-                                terms: vec![ApeironTerm::Text(norm)],
-                                canonical_text: canon,
-                                context: Some(format!("Text in <{tag}>")),
-                                locations: vec![SourceLocation {
-                                    file_path: file_path.to_string(),
-                                    line: *line,
-                                    column: *col,
-                                }],
-                            });
+                            if seen_coords.insert(coord) {
+                                items.push(ExtractedItem {
+                                    coord,
+                                    key: None,
+                                    terms: vec![ApeironTerm::Text(norm)],
+                                    canonical_text: canon,
+                                    context: Some(format!("Text in <{tag}>")),
+                                    locations: vec![SourceLocation {
+                                        file_path: file_path.to_string(),
+                                        line: *line,
+                                        column: *col,
+                                    }],
+                                });
+                            }
                         }
                     }
                     _ => {}
@@ -170,22 +191,35 @@ fn collect_svelte_items(node: &SvelteNode, file_path: &str, items: &mut Vec<Extr
             let mut slot_counter = 0;
             svelte_nodes_to_terms(children, &mut terms, &mut tag_counter, &mut slot_counter);
 
-            let normalized = ApeironTerm::normalize_sequence(terms);
+            let mut normalized = ApeironTerm::normalize_sequence(terms);
+            if let Some(ApeironTerm::Text(first)) = normalized.first_mut() {
+                *first = first.trim_start().to_string();
+            }
+            if let Some(ApeironTerm::Text(last)) = normalized.last_mut() {
+                *last = last.trim_end().to_string();
+            }
+            normalized.retain(|t| match t {
+                ApeironTerm::Text(s) => !s.is_empty(),
+                _ => true,
+            });
+
             if has_translatable_content(&normalized) {
                 let canon = ApeironTerm::to_canonical_string(&normalized);
                 let coord = ApeironCoord::from_str_canonical(&canon);
-                items.push(ExtractedItem {
-                    coord,
-                    key: None,
-                    terms: normalized,
-                    canonical_text: canon,
-                    context: Some(format!("Svelte template in {file_path}:{line}")),
-                    locations: vec![SourceLocation {
-                        file_path: file_path.to_string(),
-                        line: *line,
-                        column: *col,
-                    }],
-                });
+                if seen_coords.insert(coord) {
+                    items.push(ExtractedItem {
+                        coord,
+                        key: None,
+                        terms: normalized,
+                        canonical_text: canon,
+                        context: Some(format!("Svelte template in {file_path}:{line}")),
+                        locations: vec![SourceLocation {
+                            file_path: file_path.to_string(),
+                            line: *line,
+                            column: *col,
+                        }],
+                    });
+                }
             }
         }
     }
@@ -371,17 +405,13 @@ fn parse_svelte_element_node(
             if let Some(expr_end) = skip_curly(chars, &mut i, line, col) {
                 let expr_str: String = chars[expr_start..expr_end].iter().collect();
                 let trimmed = expr_str.trim();
-                let name = if trimmed.starts_with("t(") {
-                    let inner = trimmed
-                        .trim_start_matches("t(")
-                        .trim_end_matches(')')
-                        .trim_matches(|c| c == '\'' || c == '"');
-                    inner.to_string()
+                if let Some(literal) = crate::parsers::code::extract_literal_from_call(trimmed) {
+                    children.push(SvelteNode::Text(literal));
                 } else {
-                    sanitize_name(trimmed, slot_counter)
-                };
-                children.push(SvelteNode::Slot(name));
-                slot_counter += 1;
+                    let name = sanitize_name(trimmed, slot_counter);
+                    children.push(SvelteNode::Slot(name));
+                    slot_counter += 1;
+                }
                 continue;
             }
         }

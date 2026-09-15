@@ -1,24 +1,21 @@
-//! # Ptyktos Lingo — Universal Cross-Framework Localization on Apeiron Basis
+//! # Glossa — High-Performance Sovereign Multi-Framework Localization Engine
 //!
-//! Recreating lingo.dev in pure Rust and orders of magnitude faster,
-//! designed in the cross-framework spirit of Mitosis.
+//! Ultra-fast Rust localization compiler, CI/CD verification runner, and translation engine.
+//! Designed as an ultra-fast, cost-effective drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin.
 //!
-//! ## Mathematical & Architectural Basis
-//! Grounded in the Sanguine/Fold theorem `adapt = fromTerm ∘ universalLift`
-//! (Formalized in `Substrate.Algebra.Translation.UniversalAdapter.lean`).
+//! ## Core Architecture
 //!
-//! 1. **The Ingest (`universalLift`)**: High-speed, streaming zero-copy extractors for
-//!    React/JSX, Vue SFC, Svelte, Solid, HTML/Templates (Askama, Tera, Jinja, Handlebars),
-//!    Markdown/MDX, and translation files (JSON, PO, Fluent).
-//! 2. **The Invariant Ground (`ApeironTerm`)**: Discretized intermediate representation
-//!    where framework syntax differences are quotiented out. Coordinated via
-//!    Fibonacci/hashtrinity hashing.
-//! 3. **The Out-Leg (`fromTerm`)**: Compilers for React, Vue, Svelte, Solid, and
+//! 1. **Universal Extraction (`universal_lift`)**: High-speed, streaming zero-copy extractors for
+//!    React/JSX, Vue SFC, Svelte, Solid, HTML/Templates, Markdown/MDX, Mobile (iOS/Android/Flutter),
+//!    Backend (Python/Go/Ruby/PHP), and translation catalogs (JSON, YAML, PO, Fluent, XLIFF).
+//! 2. **Canonical IR (`CanonicalTerm`)**: Unified intermediate representation quotienting out framework
+//!    syntax differences. Coordinated via deterministic content-addressed 64-bit coordinates (`ContentCoord`).
+//! 3. **Framework Emitters (`from_term`)**: Optimized emitters for React, Vue, Svelte, Solid, and
 //!    Zero-Runtime Static Evaluation.
-//! 4. **The Null-Gate (`gate_kills_on_the_cone`)**: Boundary verification ensuring
-//!    slot and tag conservation without AI hallucinations or security leaks.
-//! 5. **Monoidal Lockfile (`lingo.lock`)**: Conflict-free commutative merging (`Table::fuse`)
-//!    and sub-millisecond delta computation.
+//! 4. **Integrity Gate (`IntegrityGate`)**: Mathematical structural verification ensuring
+//!    slot conservation, tag parity, and prompt-injection neutralization.
+//! 5. **Monoidal Lockfile (`glossa.lock`)**: Conflict-free commutative merging (`Table::fuse`)
+//!    and sub-millisecond delta computation guaranteeing 0 Git merge conflicts.
 
 pub mod cli;
 pub mod codegen;
@@ -34,7 +31,7 @@ pub mod visual;
 
 pub use config::{GlossaConfig, LingoConfig};
 pub use emitters::{emit_trans_call, TargetFramework};
-pub use engine::{gate::ApeironNullGate, TranslationEngine, TranslationProvider};
-pub use ir::{ApeironCatalog, ApeironCoord, ApeironTerm, ExtractedItem};
+pub use engine::{gate::ApeironNullGate, gate::IntegrityGate, TranslationEngine, TranslationProvider};
+pub use ir::{ApeironCatalog, ApeironCoord, ApeironTerm, CanonicalTerm, ContentCoord, ExtractedItem};
 pub use lockfile::LingoLock;
 pub use parsers::{universal_lift, SourceFormat};

@@ -1,8 +1,7 @@
-//! Apeiron Universal Intermediate Representation (IR) for Translatable Units.
+//! Universal Intermediate Representation (IR) for Translatable Units.
 //!
-//! Grounded in the theorem `adapt = fromTerm ∘ universalLift` (Sanguine/UniversalAdapter):
-//! Framework surfaces (React JSX, Vue template, Svelte, Jinja, Markdown, Fluent)
-//! are lifted into `ApeironTerm` via `universal_lift`, quotienting out syntax noise.
+//! Multi-framework surfaces (React JSX, Vue template, Svelte, Jinja, Markdown, Fluent)
+//! are lifted into `CanonicalTerm` via `universal_lift`, quotienting out syntax noise.
 //! Translation is performed on the canonical term, and target code is generated
 //! via `from_term`.
 
@@ -76,6 +75,9 @@ pub enum ApeironTerm {
         cases: Vec<(String, Vec<ApeironTerm>)>,
     },
 }
+
+/// Alias for CanonicalTerm representing universal translation intermediate representation node.
+pub type CanonicalTerm = ApeironTerm;
 
 impl ApeironTerm {
     /// Creates a flat sequence of terms into a canonical representation.
