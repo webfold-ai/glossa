@@ -1,0 +1,22 @@
+# GitLab CI configuration for ptyktos-lingo
+stages:
+  - test
+  - i18n
+
+test:cargo:
+  stage: test
+  image: rust:1.80-slim
+  script:
+    - cargo test --verbose
+
+i18n:check:
+  stage: i18n
+  image: rust:1.80-slim
+  variables:
+    FAIL_ON_MISSING: "true"
+  script:
+    - cargo run --release -- check --ci --format=text
+  artifacts:
+    when: always
+    paths:
+      - spbench-results.json

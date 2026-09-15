@@ -29,7 +29,7 @@ impl Default for LorelakeConfig {
 }
 
 pub struct LorelakeClient {
-    config: LorelakeConfig,
+    pub config: LorelakeConfig,
     client: reqwest::Client,
 }
 

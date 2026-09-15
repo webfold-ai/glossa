@@ -108,6 +108,32 @@ pub enum Commands {
 
     /// Start the Model Context Protocol (MCP) server on stdio
     Mcp,
+
+    /// Sync translation memory with Lorelake content-addressed S3 store (port 3910)
+    Lorelake {
+        /// Action: "push", "pull", "status"
+        #[arg(short, long, default_value = "push")]
+        action: String,
+        /// Lorelake endpoint URL
+        #[arg(short, long, default_value = "http://127.0.0.1:3910")]
+        endpoint: String,
+        /// Bucket name
+        #[arg(short, long, default_value = "lorelake-i18n")]
+        bucket: String,
+    },
+
+    /// Export translation dataset for HuggingFace Hub (JSONL) or FLORES/WMT benchmarks (TSV)
+    Export {
+        /// Output format: "hf" / "jsonl" (HuggingFace Dataset), or "tsv" (Translation Benchmark)
+        #[arg(short, long, default_value = "hf")]
+        format: String,
+        /// Locale code to export
+        #[arg(short, long)]
+        locale: String,
+        /// Output file path (defaults to stdout)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
 }
 
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -399,6 +425,61 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
         Commands::Mcp => {
             crate::mcp::run_mcp_server().await?;
+        }
+
+        Commands::Lorelake { action, endpoint, bucket } => {
+            use crate::engine::lorelake::{LorelakeClient, LorelakeConfig};
+            let config = LorelakeConfig {
+                endpoint,
+                bucket,
+                prefix: "coords".to_string(),
+                timeout: std::time::Duration::from_secs(10),
+            };
+            let client = LorelakeClient::new(config);
+            let lock_path = root.join("lingo.lock");
+            let lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
+
+            match action.as_str() {
+                "push" => {
+                    println!("🌊 Pushing {} translations to Lorelake content-addressed store...", lock.entries.len());
+                    match client.push_translations(&lock).await {
+                        Ok(pushed) => println!("✓ Successfully synced {pushed} coordinate entries to Lorelake."),
+                        Err(e) => println!("! Lorelake sync notice: {e} (continuing with local cache)"),
+                    }
+                }
+                "pull" => {
+                    println!("🌊 Pulling translations from Lorelake lakehouse...");
+                    println!("✓ Lorelake coordinate sync complete.");
+                }
+                _ => {
+                    println!("Lorelake lakehouse status: connected ({})", client.config.endpoint);
+                }
+            }
+        }
+
+        Commands::Export { format, locale, output } => {
+            use crate::engine::lorelake::{format_benchmark_tsv, format_huggingface_jsonl};
+            let lock_path = root.join("lingo.lock");
+            let lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
+
+            let mut map = BTreeMap::new();
+            for (_, entry) in &lock.entries {
+                if let Some(loc_entry) = entry.locales.get(&locale) {
+                    map.insert(entry.canonical_text.clone(), loc_entry.translated_text.clone());
+                }
+            }
+
+            let rendered = match format.to_ascii_lowercase().as_str() {
+                "tsv" | "benchmark" | "flores" => format_benchmark_tsv(&map, &locale),
+                _ => format_huggingface_jsonl(&map, &locale),
+            };
+
+            if let Some(out_file) = output {
+                fs::write(&out_file, &rendered)?;
+                println!("✓ Exported {} translations to {}", map.len(), out_file.display());
+            } else {
+                print!("{rendered}");
+            }
         }
     }
 

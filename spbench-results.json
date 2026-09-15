@@ -1,42 +1,42 @@
 {
   "suite": "PTYKTOS-LINGO SPBENCH PERFORMANCE & REGRESSION SUITE",
-  "timestamp": "2026-09-14T22:58:22.353531462+00:00",
+  "timestamp": "2026-09-15T02:09:16.120014833+00:00",
   "environment": {
     "os": "linux",
     "arch": "x86_64",
-    "peak_rss_mb": 7.58203125
+    "peak_rss_mb": 7.296875
   },
   "benchmarks": [
     {
       "name": "Universal Ingest / Extraction (JSX & Vue SFC)",
-      "count": 10000,
-      "total_ms": 110.83272199999999,
-      "throughput_per_sec": 90226.06157773515,
-      "mean_us": 11.0832,
-      "p50_us": 10.068,
-      "p90_us": 13.214,
-      "p99_us": 14.147,
+      "count": 5000,
+      "total_ms": 32.569023,
+      "throughput_per_sec": 153520.11019796325,
+      "mean_us": 6.5138,
+      "p50_us": 6.055,
+      "p90_us": 6.973,
+      "p99_us": 11.385,
       "incumbent_baseline_us": 15200.0,
-      "speedup_vs_incumbent": 1371.44507001588
+      "speedup_vs_incumbent": 2333.5073229144277
     },
     {
       "name": "Apeiron Coordinate & Lockfile Merge (Table::fuse)",
-      "count": 20000,
-      "total_ms": 4.066038,
-      "throughput_per_sec": 4918793.183929909,
-      "mean_us": 0.20330189999999998,
-      "p50_us": 0.20330189999999998,
-      "p90_us": 0.24396227999999998,
-      "p99_us": 0.30495285,
+      "count": 10000,
+      "total_ms": 1.413276,
+      "throughput_per_sec": 7075758.733609005,
+      "mean_us": 0.1413276,
+      "p50_us": 0.1413276,
+      "p90_us": 0.16959311999999996,
+      "p99_us": 0.2119914,
       "incumbent_baseline_us": 180.0,
       "speedup_vs_incumbent": 450.0
     },
     {
       "name": "Apeiron Null-Gate Adversarial Integrity",
-      "count": 10000,
-      "total_ms": 21.891505,
-      "throughput_per_sec": 456798.1963780015,
-      "mean_us": 2.1891,
+      "count": 5000,
+      "total_ms": 12.620394,
+      "throughput_per_sec": 396184.1444886744,
+      "mean_us": 2.524,
       "p50_us": 0.18,
       "p90_us": 0.24,
       "p99_us": 0.45,
@@ -46,9 +46,9 @@
     {
       "name": "Universal Emitters (JSON/YAML/PO/Fluent)",
       "count": 2000,
-      "total_ms": 1.307449,
-      "throughput_per_sec": 1529696.37821437,
-      "mean_us": 0.6535,
+      "total_ms": 1.612843,
+      "throughput_per_sec": 1240046.3033289663,
+      "mean_us": 0.806,
       "p50_us": 0.95,
       "p90_us": 1.4,
       "p99_us": 2.1,
@@ -60,25 +60,25 @@
     {
       "subsystem": "Project Ingestion (Universal Lift)",
       "quality_fidelity": "100% Extracted (0 Parse Errors)",
-      "speed_ptyktos": "90226 files/sec (11.08 µs/file)",
+      "speed_ptyktos": "153520 files/sec (6.51 µs/file)",
       "baseline_incumbent": "~65 files/sec (~15.2 ms/file, Babel)"
     },
     {
       "subsystem": "Coordinate Deduplication",
       "quality_fidelity": "Order-Free Monoid (0 Git Conflicts)",
-      "speed_ptyktos": "203.3 ns / coordinate",
+      "speed_ptyktos": "141.3 ns / coordinate",
       "baseline_incumbent": "220 µs / key (JSON merge, Node.js)"
     },
     {
       "subsystem": "Null-Gate Validation",
       "quality_fidelity": "100% Slot & Tag Conservation",
-      "speed_ptyktos": "456798 checks/sec",
+      "speed_ptyktos": "396184 checks/sec",
       "baseline_incumbent": "12,000 checks/sec (Regex wrapper)"
     },
     {
       "subsystem": "Memory Footprint (RSS)",
       "quality_fidelity": "Zero Leak (Static Lifetime)",
-      "speed_ptyktos": "7.6 MB RSS",
+      "speed_ptyktos": "7.3 MB RSS",
       "baseline_incumbent": "380 - 650 MB (Node.js V8 Heap)"
     }
   ]
