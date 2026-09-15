@@ -60,9 +60,25 @@ pub struct TranslationDelta {
     pub missing_locales: Vec<String>,
 }
 
+pub type GlossaLock = LingoLock;
+
 impl LingoLock {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Resolve lockfile path: glossa.lock if present/configured, else lingo.lock.
+    pub fn resolve_path<P: AsRef<Path>>(dir: P) -> std::path::PathBuf {
+        let glossa_lock = dir.as_ref().join("glossa.lock");
+        if glossa_lock.exists() {
+            glossa_lock
+        } else if dir.as_ref().join("lingo.lock").exists() {
+            dir.as_ref().join("lingo.lock")
+        } else if dir.as_ref().join("glossa.json").exists() {
+            glossa_lock
+        } else {
+            dir.as_ref().join("lingo.lock")
+        }
     }
 
     /// Load lockfile from disk.

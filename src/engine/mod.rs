@@ -4,6 +4,7 @@ pub mod gate;
 pub mod lorelake;
 pub mod providers;
 pub mod pseudo;
+pub mod tm;
 
 use async_trait::async_trait;
 use gate::{ApeironNullGate, GateViolation};

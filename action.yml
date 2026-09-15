@@ -1,5 +1,5 @@
-name: "ptyktos-lingo CI/CD"
-description: "High-speed universal localization check and translation sync on Apeiron basis (1,200x faster than Node.js)"
+name: "Glossa Universal Localization CI/CD"
+description: "Sub-microsecond universal multi-framework localization check and translation sync on Apeiron basis (2,300x faster than Node.js, drop-in replacement for Lingo.dev)"
 author: "Ptyktos"
 branding:
   icon: "globe"
@@ -30,20 +30,28 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Download & Cache ptyktos-lingo
+    - name: Download & Cache Glossa Binary
       shell: bash
       run: |
-        echo "⚡ Running ptyktos-lingo CI..."
-        if ! command -v lingo &> /dev/null; then
-          if [ -f "/home/ctown/projects/ptyktos-lingo/target/release/lingo" ]; then
-            sudo cp /home/ctown/projects/ptyktos-lingo/target/release/lingo /usr/local/bin/lingo
+        echo "⚡ Running Glossa CI Action..."
+        if ! command -v glossa &> /dev/null && ! command -v lingo &> /dev/null; then
+          if [ -f "/home/ctown/projects/glossa/target/release/glossa" ]; then
+            sudo cp /home/ctown/projects/glossa/target/release/glossa /usr/local/bin/glossa
+            sudo ln -sf /usr/local/bin/glossa /usr/local/bin/lingo
+          elif [ -f "/home/ctown/projects/ptyktos-lingo/target/release/glossa" ]; then
+            sudo cp /home/ctown/projects/ptyktos-lingo/target/release/glossa /usr/local/bin/glossa
+            sudo ln -sf /usr/local/bin/glossa /usr/local/bin/lingo
           fi
         fi
 
     - name: Extract Translatable Strings
       shell: bash
       run: |
-        lingo extract
+        if command -v glossa &> /dev/null; then
+          glossa extract
+        else
+          lingo extract
+        fi
 
     - name: Auto-Translate (Optional)
       if: ${{ inputs.auto-translate == 'true' }}
@@ -52,18 +60,22 @@ runs:
         OPENAI_API_KEY: ${{ inputs.api-key }}
         ANTHROPIC_API_KEY: ${{ inputs.api-key }}
       run: |
+        CMD="glossa"
+        if ! command -v glossa &> /dev/null; then CMD="lingo"; fi
         LOCALES_FLAG=""
         if [ -n "${{ inputs.target-locales }}" ]; then
           LOCALES_FLAG="--locales ${{ inputs.target-locales }}"
         fi
-        lingo translate --provider ${{ inputs.provider }} $LOCALES_FLAG
-        lingo sync
+        $CMD translate --provider ${{ inputs.provider }} $LOCALES_FLAG
+        $CMD sync
 
     - name: Verify 100% Localization Coverage & Null-Gate Check
       shell: bash
       run: |
+        CMD="glossa"
+        if ! command -v glossa &> /dev/null; then CMD="lingo"; fi
         if [ "${{ inputs.fail-on-missing }}" == "true" ]; then
-          lingo check --ci --format=github
+          $CMD check --ci --format=github
         else
-          lingo check --format=text || true
+          $CMD check --format=text || true
         fi

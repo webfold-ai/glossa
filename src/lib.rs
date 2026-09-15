@@ -21,15 +21,18 @@
 //!    and sub-millisecond delta computation.
 
 pub mod cli;
+pub mod codegen;
 pub mod config;
 pub mod emitters;
 pub mod engine;
+pub mod importer;
 pub mod ir;
 pub mod lockfile;
 pub mod mcp;
 pub mod parsers;
+pub mod visual;
 
-pub use config::LingoConfig;
+pub use config::{GlossaConfig, LingoConfig};
 pub use emitters::{emit_trans_call, TargetFramework};
 pub use engine::{gate::ApeironNullGate, TranslationEngine, TranslationProvider};
 pub use ir::{ApeironCatalog, ApeironCoord, ApeironTerm, ExtractedItem};

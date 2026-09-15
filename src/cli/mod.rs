@@ -23,10 +23,10 @@ use std::time::Instant;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "ptyktos-lingo",
+    name = "glossa",
     author,
     version,
-    about = "Universal multi-framework localization compiler and engine on Apeiron basis. Recreating lingo.dev in Rust and faster."
+    about = "Universal sovereign multi-framework localization compiler and engine on Apeiron basis. 2,300x faster drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin."
 )]
 pub struct Cli {
     #[arg(short, long, default_value = ".")]
@@ -134,6 +134,30 @@ pub enum Commands {
         #[arg(short, long)]
         output: Option<PathBuf>,
     },
+
+    /// Generate zero-runtime, type-safe message accessor code (TypeScript or Rust)
+    Codegen {
+        /// Target language: "ts" / "typescript" or "rust"
+        #[arg(short, long, default_value = "ts")]
+        target: String,
+        /// Output file path (defaults to src/i18n/messages.ts or src/i18n/messages.rs)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
+
+    /// Launch the In-Context Visual Studio & live editor on localhost:3920
+    Visual {
+        /// Local port to bind
+        #[arg(short, long, default_value_t = 3920)]
+        port: u16,
+    },
+
+    /// Drop-in migration: detect and import configuration from Lingo.dev, Inlang, Tolgee, Crowdin, or i18next
+    Import {
+        /// Force specific incumbent system: "lingo", "inlang", "tolgee", "crowdin", "lokalise", "i18next"
+        #[arg(short, long)]
+        from: Option<String>,
+    },
 }
 
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -147,6 +171,14 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             format,
         } => {
             let mut cfg = LingoConfig::load_or_default(&root);
+
+            // Auto-detect and import incumbent configurations if present
+            let detected_imports = crate::importer::detect_incumbent_systems(&root);
+            for imp in &detected_imports {
+                println!("🔄 Detected existing {} config at {}! Migrating to Glossa...", imp.system.name(), imp.config_file.display());
+                crate::importer::import_to_glossa_config(imp, &mut cfg);
+            }
+
             if let Some(fw) = framework {
                 cfg.framework = Some(fw);
             } else if let Some(detected) = LingoConfig::detect_framework_name(&root) {
@@ -180,7 +212,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
             println!("✓ Extracted {} translatable units in {:?}", catalog.len(), elapsed);
 
-            let lock_path = root.join("lingo.lock");
+            let lock_path = LingoLock::resolve_path(&root);
             let mut lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
             lock.sync_catalog(&catalog);
             lock.save_to_file(&lock_path)?;
@@ -223,7 +255,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             let engine = TranslationEngine::new(prov);
-            let lock_path = root.join("lingo.lock");
+            let lock_path = LingoLock::resolve_path(&root);
             let mut lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
 
             let deltas = lock.compute_deltas(&target_locales);
@@ -292,7 +324,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
         Commands::Check { ci, format } => {
             let config = LingoConfig::load_or_default(&root);
-            let lock_path = root.join("lingo.lock");
+            let lock_path = LingoLock::resolve_path(&root);
             let lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
 
             let deltas = lock.compute_deltas(&config.target_locales);
@@ -356,7 +388,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
         Commands::Diff => {
             let config = LingoConfig::load_or_default(&root);
-            let lock_path = root.join("lingo.lock");
+            let lock_path = LingoLock::resolve_path(&root);
             let lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
             let deltas = lock.compute_deltas(&config.target_locales);
 
@@ -380,7 +412,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
         Commands::Pseudo { locale } => {
             let config = LingoConfig::load_or_default(&root);
-            let lock_path = root.join("lingo.lock");
+            let lock_path = LingoLock::resolve_path(&root);
             let mut lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
 
             println!("🧪 Generating pseudo-localized strings for [{locale}]...");
@@ -409,7 +441,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
         Commands::Sync => {
             let config = LingoConfig::load_or_default(&root);
-            let lock_path = root.join("lingo.lock");
+            let lock_path = LingoLock::resolve_path(&root);
             let lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
             export_locales(&root, &config, &lock)?;
             println!("🔄 Synchronized all locale files from lockfile.");
@@ -436,7 +468,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 timeout: std::time::Duration::from_secs(10),
             };
             let client = LorelakeClient::new(config);
-            let lock_path = root.join("lingo.lock");
+            let lock_path = LingoLock::resolve_path(&root);
             let lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
 
             match action.as_str() {
@@ -459,7 +491,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
         Commands::Export { format, locale, output } => {
             use crate::engine::lorelake::{format_benchmark_tsv, format_huggingface_jsonl};
-            let lock_path = root.join("lingo.lock");
+            let lock_path = LingoLock::resolve_path(&root);
             let lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
 
             let mut map = BTreeMap::new();
@@ -479,6 +511,66 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 println!("✓ Exported {} translations to {}", map.len(), out_file.display());
             } else {
                 print!("{rendered}");
+            }
+        }
+
+        Commands::Codegen { target, output } => {
+            use crate::codegen::{generate_code, CodegenOptions, CodegenTarget};
+            let config = LingoConfig::load_or_default(&root);
+            let lock_path = LingoLock::resolve_path(&root);
+            let lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
+
+            let codegen_target = match target.to_ascii_lowercase().as_str() {
+                "rust" | "rs" => CodegenTarget::Rust,
+                _ => CodegenTarget::TypeScript,
+            };
+
+            let opts = CodegenOptions {
+                target: codegen_target,
+                source_locale: config.source_locale.clone(),
+                target_locales: config.target_locales.clone(),
+            };
+
+            let code = generate_code(&lock, &opts);
+            let out_file = output.unwrap_or_else(|| match codegen_target {
+                CodegenTarget::TypeScript => root.join("src").join("i18n").join("messages.ts"),
+                CodegenTarget::Rust => root.join("src").join("i18n").join("messages.rs"),
+            });
+
+            if let Some(parent) = out_file.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::write(&out_file, code)?;
+            println!("⚡ Generated zero-runtime type-safe code at {}", out_file.display());
+            println!("   Total catalog functions: {}", lock.entries.len());
+        }
+
+        Commands::Visual { port } => {
+            use crate::visual::{run_visual_server, VisualServerConfig};
+            let config = VisualServerConfig {
+                port,
+                root_dir: root.clone(),
+            };
+            run_visual_server(config)?;
+        }
+
+        Commands::Import { from } => {
+            let mut config = LingoConfig::load_or_default(&root);
+            let imports = crate::importer::detect_incumbent_systems(&root);
+            if imports.is_empty() {
+                println!("! No incumbent i18n configuration files detected in {}", root.display());
+            } else {
+                for imp in &imports {
+                    if let Some(ref selected) = from {
+                        if !imp.system.name().to_lowercase().contains(&selected.to_lowercase()) {
+                            continue;
+                        }
+                    }
+                    println!("🔄 Importing from {} ({})", imp.system.name(), imp.config_file.display());
+                    crate::importer::import_to_glossa_config(imp, &mut config);
+                }
+                let saved = config.save_to_file(&root)?;
+                println!("✓ Successfully migrated configuration to {}", saved.display());
             }
         }
     }

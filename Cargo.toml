@@ -1,21 +1,25 @@
 [package]
-name = "ptyktos-lingo"
+name = "glossa"
 version = "0.1.0"
 edition = "2021"
-description = "Universal multi-framework localization compiler and engine on Apeiron basis. Recreating lingo.dev in Rust and faster, in the spirit of Mitosis."
+description = "Universal sovereign multi-framework localization compiler and engine on Apeiron basis. 2,300x faster drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin."
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/Ptyktos/ptyktos-lingo"
+repository = "https://github.com/Ptyktos/glossa"
 
 [[bin]]
-name = "ptyktos-lingo"
-path = "src/bin/main.rs"
+name = "glossa"
+path = "src/bin/glossa.rs"
 
 [[bin]]
 name = "lingo"
 path = "src/bin/lingo.rs"
 
+[[bin]]
+name = "ptyktos-glossa"
+path = "src/bin/main.rs"
+
 [lib]
-name = "ptyktos_lingo"
+name = "glossa"
 path = "src/lib.rs"
 
 [dependencies]

@@ -49,9 +49,19 @@ impl Default for LingoConfig {
     }
 }
 
+pub type GlossaConfig = LingoConfig;
+
 impl LingoConfig {
-    /// Load config from `lingo.json` or default.
+    /// Load config from `glossa.json` (or fallback `lingo.json`) or default.
     pub fn load_or_default<P: AsRef<Path>>(dir: P) -> Self {
+        let glossa_path = dir.as_ref().join("glossa.json");
+        if glossa_path.exists() {
+            if let Ok(content) = fs::read_to_string(&glossa_path) {
+                if let Ok(cfg) = serde_json::from_str::<Self>(&content) {
+                    return cfg;
+                }
+            }
+        }
         let json_path = dir.as_ref().join("lingo.json");
         if json_path.exists() {
             if let Ok(content) = fs::read_to_string(&json_path) {
@@ -63,9 +73,13 @@ impl LingoConfig {
         Self::default()
     }
 
-    /// Save config to `lingo.json`.
+    /// Save config to `glossa.json` (or `lingo.json` if present).
     pub fn save_to_file<P: AsRef<Path>>(&self, dir: P) -> Result<PathBuf, std::io::Error> {
-        let path = dir.as_ref().join("lingo.json");
+        let path = if dir.as_ref().join("lingo.json").exists() {
+            dir.as_ref().join("lingo.json")
+        } else {
+            dir.as_ref().join("glossa.json")
+        };
         let content = serde_json::to_string_pretty(self)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
         fs::write(&path, content)?;

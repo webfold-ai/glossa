@@ -220,7 +220,7 @@ async fn handle_tool_call(name: &str, args: &Value, engine: &TranslationEngine) 
             let dir_str = args.get("dir").and_then(|v| v.as_str()).unwrap_or(".");
             let dir = Path::new(dir_str);
             let config = LingoConfig::load_or_default(dir);
-            let lock_path = dir.join("lingo.lock");
+            let lock_path = LingoLock::resolve_path(dir);
             let lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
             let deltas = lock.compute_deltas(&config.target_locales);
 

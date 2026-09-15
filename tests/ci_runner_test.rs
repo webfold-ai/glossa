@@ -7,7 +7,6 @@
 //! 4. Catches Apeiron Null-Gate violations (e.g. dropped `{slot}` or tag corruptions) before deployment.
 //! 5. Successfully passes with exit code 0 when coverage is 100%.
 
-use std::collections::BTreeMap;
 use std::fs;
 use std::process::Command;
 use tempfile::tempdir;
