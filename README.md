@@ -147,10 +147,17 @@ glossa lorelake push --bucket translations
 
 ---
 
-## Documentation & Whitepapers
+## Documentation, Playbooks & Sales Collateral
 
-- [Comprehensive SWOT Analysis vs. Incumbents](docs/SWOT_ANALYSIS.md)
+- [Commercial Sales One-Pager & Executive Battlecard](docs/SALES_ONE_PAGER.md)
+- [Technical Evaluation Guide & Enterprise Scorecard](docs/EVALUATION_GUIDE.md)
+- [Integrating Glossa into Modern AI Workflows (Cursor, Windsurf, Claude Code, MCP)](docs/AI_WORKFLOWS_GUIDE.md)
+- [Open-Source (OSS) Maintainer & Contributor Guide (CI/CD)](docs/OSS_PROJECT_GUIDE.md)
+- [Enterprise Deployment Guide: Multi-Repo, Governance & Air-Gapped Workflows](docs/ENTERPRISE_DEPLOYMENT_GUIDE.md)
+- [Glossa for Vibe Coders & Non-Technical Web Builders (v0, Bolt.new, Lovable)](docs/VIBE_CODING_NO_CODE_GUIDE.md)
+- [Full-Stack, Mobile & Digital Agency Playbook](docs/AGENCY_AND_CROSS_PLATFORM_PLAYBOOK.md)
 - [Commercial Packaging, Revenue Model & TCO Analysis](docs/COMMERCIAL_PACKAGING_TCO.md)
+- [Comprehensive SWOT Analysis vs. Incumbents](docs/SWOT_ANALYSIS.md)
 - [Go-To-Market Launch Kit & Developer Collateral](docs/GTM_LAUNCH_KIT.md)
 
 ---
