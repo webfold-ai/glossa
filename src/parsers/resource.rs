@@ -53,6 +53,45 @@ fn flatten_json(val: &Value, prefix: String, file_path: &str, items: &mut Vec<Ex
     }
 }
 
+/// Extracts translatable entries from HuggingFace Dataset JSON Lines (.jsonl).
+pub fn extract_jsonl(source: &str, file_path: &str) -> Vec<ExtractedItem> {
+    let mut items = Vec::new();
+    for (line_idx, line) in source.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if let Ok(Value::Object(map)) = serde_json::from_str::<Value>(trimmed) {
+            let text_val = map
+                .get("source")
+                .or_else(|| map.get("text"))
+                .or_else(|| map.get("translation"))
+                .and_then(|v| v.as_str());
+
+            if let Some(text) = text_val {
+                if !text.trim().is_empty() {
+                    let parsed_terms = parse_interpolated_string(text);
+                    let canon = ApeironTerm::to_canonical_string(&parsed_terms);
+                    let coord = ApeironCoord::from_str_canonical(&canon);
+                    items.push(ExtractedItem {
+                        coord,
+                        key: map.get("key").and_then(|k| k.as_str()).map(|k| k.to_string()),
+                        terms: parsed_terms,
+                        canonical_text: canon,
+                        context: Some(format!("JSONL in {file_path}:{}", line_idx + 1)),
+                        locations: vec![SourceLocation {
+                            file_path: file_path.to_string(),
+                            line: line_idx + 1,
+                            column: 1,
+                        }],
+                    });
+                }
+            }
+        }
+    }
+    items
+}
+
 /// Extracts translatable entries from Flutter ARB (.arb) files.
 /// ARB is JSON where keys starting with `@` are attribute metadata.
 pub fn extract_flutter_arb(source: &str, file_path: &str) -> Vec<ExtractedItem> {

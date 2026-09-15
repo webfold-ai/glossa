@@ -6,10 +6,57 @@
 use crate::ir::coord::ApeironCoord;
 use crate::ir::term::{normalize_whitespace, ApeironTerm, ExtractedItem, SourceLocation};
 
+const TRANSLATABLE_ATTRS: &[&str] = &[
+    "placeholder",
+    "title",
+    "alt",
+    "aria-label",
+    "aria-placeholder",
+    "label",
+];
+
+#[derive(Clone, Debug)]
+enum SvelteNode {
+    Text(String),
+    Slot(String),
+    Element {
+        tag: String,
+        line: usize,
+        col: usize,
+        attrs: Vec<(String, String)>,
+        children: Vec<SvelteNode>,
+    },
+}
+
+fn is_container_tag(tag: &str) -> bool {
+    if tag.chars().next().map_or(false, |c| c.is_ascii_uppercase()) {
+        return true;
+    }
+    matches!(
+        tag.to_ascii_lowercase().as_str(),
+        "aside"
+            | "section"
+            | "header"
+            | "footer"
+            | "main"
+            | "nav"
+            | "div"
+            | "form"
+            | "dialog"
+            | "ul"
+            | "ol"
+            | "table"
+            | "thead"
+            | "tbody"
+            | "tr"
+            | "fieldset"
+            | "article"
+    )
+}
+
 pub fn extract_svelte(source: &str, file_path: &str) -> Vec<ExtractedItem> {
     let mut items = Vec::new();
 
-    // Strip script and style blocks
     let cleaned = strip_blocks(source, &["script", "style"]);
 
     let chars: Vec<char> = cleaned.chars().collect();
@@ -27,29 +74,8 @@ pub fn extract_svelte(source: &str, file_path: &str) -> Vec<ExtractedItem> {
         }
 
         if chars[idx] == '<' && idx + 1 < len && chars[idx + 1].is_ascii_alphabetic() {
-            let elem_line = line;
-            let elem_col = col;
-
-            if let Some((new_idx, terms, attrs)) = parse_svelte_element(&chars, idx, &mut line, &mut col, file_path) {
-                items.extend(attrs);
-
-                let normalized = ApeironTerm::normalize_sequence(terms);
-                if has_translatable_content(&normalized) {
-                    let canon = ApeironTerm::to_canonical_string(&normalized);
-                    let coord = ApeironCoord::from_str_canonical(&canon);
-                    items.push(ExtractedItem {
-                        coord,
-                        key: None,
-                        terms: normalized,
-                        canonical_text: canon,
-                        context: Some(format!("Svelte template in {file_path}:{elem_line}")),
-                        locations: vec![SourceLocation {
-                            file_path: file_path.to_string(),
-                            line: elem_line,
-                            column: elem_col,
-                        }],
-                    });
-                }
+            if let Some((new_idx, node)) = parse_svelte_element_node(&chars, idx, &mut line, &mut col) {
+                collect_svelte_items(&node, file_path, &mut items);
                 idx = new_idx;
                 continue;
             }
@@ -70,7 +96,6 @@ fn strip_blocks(source: &str, tags: &[&str]) -> String {
         while let Some(start) = res.to_ascii_lowercase().find(&open_tag) {
             if let Some(end_offset) = res.to_ascii_lowercase()[start..].find(&close_tag) {
                 let end = start + end_offset + close_tag.len();
-                // Replace characters with space to preserve line count
                 let num_lines = res[start..end].matches('\n').count();
                 let replacement = "\n".repeat(num_lines);
                 res.replace_range(start..end, &replacement);
@@ -82,6 +107,125 @@ fn strip_blocks(source: &str, tags: &[&str]) -> String {
     res
 }
 
+fn collect_svelte_items(node: &SvelteNode, file_path: &str, items: &mut Vec<ExtractedItem>) {
+    if let SvelteNode::Element {
+        tag,
+        line,
+        col,
+        attrs,
+        children,
+    } = node
+    {
+        for (attr_name, attr_val) in attrs {
+            if TRANSLATABLE_ATTRS.contains(&attr_name.as_str()) && !attr_val.trim().is_empty() {
+                let trimmed = attr_val.trim().to_string();
+                let canon = trimmed.clone();
+                let coord = ApeironCoord::from_str_canonical(&canon);
+                items.push(ExtractedItem {
+                    coord,
+                    key: None,
+                    terms: vec![ApeironTerm::Text(trimmed)],
+                    canonical_text: canon,
+                    context: Some(format!("Svelte attribute {attr_name} in <{tag}>")),
+                    locations: vec![SourceLocation {
+                        file_path: file_path.to_string(),
+                        line: *line,
+                        column: *col,
+                    }],
+                });
+            }
+        }
+
+        let has_child_elements = children.iter().any(|c| matches!(c, SvelteNode::Element { .. }));
+
+        if is_container_tag(tag) && has_child_elements {
+            for child in children {
+                match child {
+                    SvelteNode::Element { .. } => collect_svelte_items(child, file_path, items),
+                    SvelteNode::Text(t) => {
+                        let norm = normalize_whitespace(t);
+                        if !norm.trim().is_empty() && norm.chars().any(|c| c.is_alphanumeric()) {
+                            let canon = norm.clone();
+                            let coord = ApeironCoord::from_str_canonical(&canon);
+                            items.push(ExtractedItem {
+                                coord,
+                                key: None,
+                                terms: vec![ApeironTerm::Text(norm)],
+                                canonical_text: canon,
+                                context: Some(format!("Text in <{tag}>")),
+                                locations: vec![SourceLocation {
+                                    file_path: file_path.to_string(),
+                                    line: *line,
+                                    column: *col,
+                                }],
+                            });
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        } else {
+            let mut terms = Vec::new();
+            let mut tag_counter = 0;
+            let mut slot_counter = 0;
+            svelte_nodes_to_terms(children, &mut terms, &mut tag_counter, &mut slot_counter);
+
+            let normalized = ApeironTerm::normalize_sequence(terms);
+            if has_translatable_content(&normalized) {
+                let canon = ApeironTerm::to_canonical_string(&normalized);
+                let coord = ApeironCoord::from_str_canonical(&canon);
+                items.push(ExtractedItem {
+                    coord,
+                    key: None,
+                    terms: normalized,
+                    canonical_text: canon,
+                    context: Some(format!("Svelte template in {file_path}:{line}")),
+                    locations: vec![SourceLocation {
+                        file_path: file_path.to_string(),
+                        line: *line,
+                        column: *col,
+                    }],
+                });
+            }
+        }
+    }
+}
+
+fn svelte_nodes_to_terms(
+    nodes: &[SvelteNode],
+    terms: &mut Vec<ApeironTerm>,
+    tag_counter: &mut usize,
+    slot_counter: &mut usize,
+) {
+    for node in nodes {
+        match node {
+            SvelteNode::Text(t) => {
+                terms.push(ApeironTerm::Text(t.clone()));
+            }
+            SvelteNode::Slot(name) => {
+                terms.push(ApeironTerm::Slot {
+                    id: *slot_counter,
+                    name: name.clone(),
+                    raw_expr: Some(name.clone()),
+                });
+                *slot_counter += 1;
+            }
+            SvelteNode::Element { tag, children, .. } => {
+                let tag_id = *tag_counter;
+                *tag_counter += 1;
+                let mut sub_terms = Vec::new();
+                svelte_nodes_to_terms(children, &mut sub_terms, tag_counter, slot_counter);
+                terms.push(ApeironTerm::Tag {
+                    id: tag_id,
+                    tag: tag.clone(),
+                    attrs: Vec::new(),
+                    children: sub_terms,
+                });
+            }
+        }
+    }
+}
+
 fn has_translatable_content(terms: &[ApeironTerm]) -> bool {
     terms.iter().any(|t| match t {
         ApeironTerm::Text(s) => s.chars().any(|c| c.is_alphanumeric()),
@@ -91,14 +235,15 @@ fn has_translatable_content(terms: &[ApeironTerm]) -> bool {
     })
 }
 
-fn parse_svelte_element(
+fn parse_svelte_element_node(
     chars: &[char],
     start: usize,
     line: &mut usize,
     col: &mut usize,
-    file_path: &str,
-) -> Option<(usize, Vec<ApeironTerm>, Vec<ExtractedItem>)> {
+) -> Option<(usize, SvelteNode)> {
     let mut i = start + 1;
+    let tag_line = *line;
+    let tag_col = *col;
     let mut tag_name = String::new();
 
     while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '-' || chars[i] == '_') {
@@ -110,10 +255,10 @@ fn parse_svelte_element(
         return None;
     }
 
-    let mut attr_items = Vec::new();
+    let mut attrs = Vec::new();
     let mut is_self_closing = false;
 
-    // Attributes
+    // Parse attributes
     while i < chars.len() {
         skip_ws(chars, &mut i, line, col);
         if i >= chars.len() {
@@ -130,10 +275,15 @@ fn parse_svelte_element(
             break;
         }
 
-        let attr_line = *line;
-        let attr_col = *col;
         let mut attr_name = String::new();
-        while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '-' || chars[i] == '_') {
+        while i < chars.len()
+            && (chars[i].is_alphanumeric()
+                || chars[i] == '-'
+                || chars[i] == '_'
+                || chars[i] == ':'
+                || chars[i] == '@'
+                || chars[i] == '.')
+        {
             attr_name.push(chars[i]);
             i += 1;
         }
@@ -142,55 +292,60 @@ fn parse_svelte_element(
         if i < chars.len() && chars[i] == '=' {
             i += 1;
             skip_ws(chars, &mut i, line, col);
-            if i < chars.len() && (chars[i] == '"' || chars[i] == '\'') {
-                let quote = chars[i];
-                i += 1;
-                let mut attr_val = String::new();
-                while i < chars.len() && chars[i] != quote {
-                    attr_val.push(chars[i]);
+            if i < chars.len() {
+                if chars[i] == '"' || chars[i] == '\'' {
+                    let quote = chars[i];
                     i += 1;
-                }
-                if i < chars.len() {
-                    i += 1;
-                }
-
-                if (attr_name == "placeholder" || attr_name == "title" || attr_name == "alt" || attr_name == "aria-label")
-                    && !attr_val.trim().is_empty()
-                {
-                    let trimmed = attr_val.trim().to_string();
-                    let canon = trimmed.clone();
-                    let coord = ApeironCoord::from_str_canonical(&canon);
-                    attr_items.push(ExtractedItem {
-                        coord,
-                        key: None,
-                        terms: vec![ApeironTerm::Text(trimmed)],
-                        canonical_text: canon,
-                        context: Some(format!("Svelte attribute {attr_name} in {tag_name}")),
-                        locations: vec![SourceLocation {
-                            file_path: file_path.to_string(),
-                            line: attr_line,
-                            column: attr_col,
-                        }],
-                    });
+                    let mut attr_val = String::new();
+                    while i < chars.len() && chars[i] != quote {
+                        if chars[i] == '\\' && i + 1 < chars.len() {
+                            i += 1;
+                        }
+                        attr_val.push(chars[i]);
+                        i += 1;
+                    }
+                    if i < chars.len() {
+                        i += 1;
+                    }
+                    attrs.push((attr_name, attr_val));
+                } else if chars[i] == '{' {
+                    // Svelte expression attribute e.g. on:click={() => alert('Saved')}
+                    let _ = skip_curly(chars, &mut i, line, col);
                 }
             }
+        } else if i < chars.len() && chars[i] == '{' {
+            // Shorthand attribute {prop}
+            let _ = skip_curly(chars, &mut i, line, col);
+        } else if attr_name.is_empty() {
+            // Guard against infinite loop if unexpected char
+            i += 1;
         }
     }
 
     if is_self_closing {
-        return Some((i, Vec::new(), attr_items));
+        return Some((
+            i,
+            SvelteNode::Element {
+                tag: tag_name,
+                line: tag_line,
+                col: tag_col,
+                attrs,
+                children: Vec::new(),
+            },
+        ));
     }
 
     let mut children = Vec::new();
     let mut slot_counter = 0;
-    let mut tag_counter = 0;
 
     while i < chars.len() {
-        // Closing tag check
+        // Check closing tag
         if chars[i] == '<' && i + 1 < chars.len() && chars[i + 1] == '/' {
             let mut close_idx = i + 2;
             let mut close_tag = String::new();
-            while close_idx < chars.len() && (chars[close_idx].is_alphanumeric() || chars[close_idx] == '-' || chars[close_idx] == '_') {
+            while close_idx < chars.len()
+                && (chars[close_idx].is_alphanumeric() || chars[close_idx] == '-' || chars[close_idx] == '_')
+            {
                 close_tag.push(chars[close_idx]);
                 close_idx += 1;
             }
@@ -203,33 +358,29 @@ fn parse_svelte_element(
 
         // Child element
         if chars[i] == '<' && i + 1 < chars.len() && chars[i + 1].is_ascii_alphabetic() {
-            if let Some((new_idx, sub_terms, sub_attrs)) = parse_svelte_element(chars, i, line, col, file_path) {
-                attr_items.extend(sub_attrs);
-                let tag_id = tag_counter;
-                tag_counter += 1;
-                children.push(ApeironTerm::Tag {
-                    id: tag_id,
-                    tag: "tag".to_string(),
-                    attrs: Vec::new(),
-                    children: sub_terms,
-                });
+            if let Some((new_idx, child_node)) = parse_svelte_element_node(chars, i, line, col) {
+                children.push(child_node);
                 i = new_idx;
                 continue;
             }
         }
 
-        // Svelte expression `{expr}`
+        // Svelte expression {expr}
         if chars[i] == '{' {
             let expr_start = i + 1;
             if let Some(expr_end) = skip_curly(chars, &mut i, line, col) {
                 let expr_str: String = chars[expr_start..expr_end].iter().collect();
                 let trimmed = expr_str.trim();
-                let name = sanitize_name(trimmed, slot_counter);
-                children.push(ApeironTerm::Slot {
-                    id: slot_counter,
-                    name,
-                    raw_expr: Some(trimmed.to_string()),
-                });
+                let name = if trimmed.starts_with("t(") {
+                    let inner = trimmed
+                        .trim_start_matches("t(")
+                        .trim_end_matches(')')
+                        .trim_matches(|c| c == '\'' || c == '"');
+                    inner.to_string()
+                } else {
+                    sanitize_name(trimmed, slot_counter)
+                };
+                children.push(SvelteNode::Slot(name));
                 slot_counter += 1;
                 continue;
             }
@@ -250,11 +401,27 @@ fn parse_svelte_element(
 
         let norm = normalize_whitespace(&text);
         if !norm.trim().is_empty() {
-            children.push(ApeironTerm::Text(norm));
+            children.push(SvelteNode::Text(norm));
+        }
+
+        // Break on closing tag for parent
+        if i < chars.len() && chars[i] == '<' {
+            if i + 1 < chars.len() && chars[i + 1] == '/' {
+                break;
+            }
         }
     }
 
-    Some((i, children, attr_items))
+    Some((
+        i,
+        SvelteNode::Element {
+            tag: tag_name,
+            line: tag_line,
+            col: tag_col,
+            attrs,
+            children,
+        },
+    ))
 }
 
 fn skip_ws(chars: &[char], i: &mut usize, line: &mut usize, col: &mut usize) {
@@ -275,17 +442,31 @@ fn skip_curly(chars: &[char], i: &mut usize, line: &mut usize, col: &mut usize) 
     }
     *i += 1;
     let mut depth = 1;
+    let mut in_quote = None;
+
     while *i < chars.len() && depth > 0 {
-        if chars[*i] == '{' {
-            depth += 1;
-        } else if chars[*i] == '}' {
-            depth -= 1;
-            if depth == 0 {
-                let end = *i;
+        let c = chars[*i];
+        if let Some(q) = in_quote {
+            if c == '\\' && *i + 1 < chars.len() {
                 *i += 1;
-                return Some(end);
+            } else if c == q {
+                in_quote = None;
             }
-        } else if chars[*i] == '\n' {
+        } else {
+            if c == '"' || c == '\'' || c == '`' {
+                in_quote = Some(c);
+            } else if c == '{' {
+                depth += 1;
+            } else if c == '}' {
+                depth -= 1;
+                if depth == 0 {
+                    let end = *i;
+                    *i += 1;
+                    return Some(end);
+                }
+            }
+        }
+        if c == '\n' {
             *line += 1;
             *col = 1;
         } else {
@@ -298,13 +479,13 @@ fn skip_curly(chars: &[char], i: &mut usize, line: &mut usize, col: &mut usize) 
 
 fn sanitize_name(expr: &str, fallback_id: usize) -> String {
     let clean: String = expr
+        .trim()
         .chars()
-        .map(|c| if c == '.' { '_' } else { c })
-        .filter(|c| c.is_alphanumeric() || *c == '_')
+        .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '.')
         .collect();
-    if clean.is_empty() || clean.chars().next().unwrap().is_numeric() {
+    if clean.is_empty() || clean.starts_with(|c: char| c.is_numeric()) {
         format!("var{fallback_id}")
-    } else if clean.len() > 20 {
+    } else if clean.len() > 40 {
         format!("var{fallback_id}")
     } else {
         clean

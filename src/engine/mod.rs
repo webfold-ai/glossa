@@ -1,6 +1,7 @@
 //! The Translation Engine & Provider Management.
 
 pub mod gate;
+pub mod lorelake;
 pub mod providers;
 pub mod pseudo;
 

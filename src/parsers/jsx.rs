@@ -17,6 +17,49 @@ const TRANSLATABLE_ATTRS: &[&str] = &[
     "label",
 ];
 
+#[derive(Clone, Debug)]
+enum JsxNode {
+    Text(String),
+    Slot(String),
+    Element {
+        tag: String,
+        line: usize,
+        col: usize,
+        attrs: Vec<(String, String)>,
+        children: Vec<JsxNode>,
+    },
+}
+
+/// Checks if a tag is a structural container rather than a single phrase/message.
+fn is_container_tag(tag: &str) -> bool {
+    if tag.chars().next().map_or(false, |c| c.is_ascii_uppercase()) {
+        return true;
+    }
+    matches!(
+        tag.to_ascii_lowercase().as_str(),
+        "div"
+            | "section"
+            | "header"
+            | "footer"
+            | "main"
+            | "aside"
+            | "dialog"
+            | "nav"
+            | "form"
+            | "body"
+            | "html"
+            | "template"
+            | "ul"
+            | "ol"
+            | "table"
+            | "thead"
+            | "tbody"
+            | "tr"
+            | "fieldset"
+            | "article"
+    )
+}
+
 /// Extracts translatable units from JSX/TSX source code.
 pub fn extract_jsx(source: &str, file_path: &str) -> Vec<ExtractedItem> {
     let mut items = Vec::new();
@@ -28,7 +71,6 @@ pub fn extract_jsx(source: &str, file_path: &str) -> Vec<ExtractedItem> {
     let mut col = 1;
 
     while idx < len {
-        // Track line/column
         if chars[idx] == '\n' {
             line += 1;
             col = 1;
@@ -36,38 +78,11 @@ pub fn extract_jsx(source: &str, file_path: &str) -> Vec<ExtractedItem> {
             continue;
         }
 
-        // Check for JSX opening tag `<Tag` (not `</`, not `<!--`, not `<!`, not `<?`)
         if chars[idx] == '<' && idx + 1 < len {
             let next = chars[idx + 1];
             if next.is_ascii_alphabetic() {
-                // Parse element
-                let tag_start_line = line;
-                let tag_start_col = col;
-                if let Some((new_idx, elem_terms, attr_items)) =
-                    parse_jsx_element(&chars, idx, &mut line, &mut col, file_path)
-                {
-                    // Add attribute items
-                    items.extend(attr_items);
-
-                    // If the element has meaningful text terms, add as translatable item
-                    let normalized = ApeironTerm::normalize_sequence(elem_terms);
-                    if has_translatable_content(&normalized) {
-                        let canon = ApeironTerm::to_canonical_string(&normalized);
-                        let coord = ApeironCoord::from_str_canonical(&canon);
-                        items.push(ExtractedItem {
-                            coord,
-                            key: None,
-                            terms: normalized,
-                            canonical_text: canon,
-                            context: Some(format!("JSX in {file_path}:{tag_start_line}")),
-                            locations: vec![SourceLocation {
-                                file_path: file_path.to_string(),
-                                line: tag_start_line,
-                                column: tag_start_col,
-                            }],
-                        });
-                    }
-
+                if let Some((new_idx, node)) = parse_jsx_element_node(&chars, idx, &mut line, &mut col) {
+                    collect_jsx_items(&node, file_path, &mut items);
                     idx = new_idx;
                     continue;
                 }
@@ -81,7 +96,128 @@ pub fn extract_jsx(source: &str, file_path: &str) -> Vec<ExtractedItem> {
     items
 }
 
-/// Checks if a list of terms contains actual translatable text (not just whitespace or empty).
+fn collect_jsx_items(node: &JsxNode, file_path: &str, items: &mut Vec<ExtractedItem>) {
+    if let JsxNode::Element {
+        tag,
+        line,
+        col,
+        attrs,
+        children,
+    } = node
+    {
+        // 1. Collect translatable attributes
+        for (attr_name, attr_val) in attrs {
+            if TRANSLATABLE_ATTRS.contains(&attr_name.as_str()) && !attr_val.trim().is_empty() {
+                let trimmed = attr_val.trim().to_string();
+                let canon = trimmed.clone();
+                let coord = ApeironCoord::from_str_canonical(&canon);
+                items.push(ExtractedItem {
+                    coord,
+                    key: None,
+                    terms: vec![ApeironTerm::Text(trimmed)],
+                    canonical_text: canon,
+                    context: Some(format!("Attribute {attr_name} in <{tag}>")),
+                    locations: vec![SourceLocation {
+                        file_path: file_path.to_string(),
+                        line: *line,
+                        column: *col,
+                    }],
+                });
+            }
+        }
+
+        // 2. Check container semantics
+        let has_child_elements = children.iter().any(|c| matches!(c, JsxNode::Element { .. }));
+
+        if is_container_tag(tag) && has_child_elements {
+            for child in children {
+                match child {
+                    JsxNode::Element { .. } => collect_jsx_items(child, file_path, items),
+                    JsxNode::Text(t) => {
+                        let norm = normalize_whitespace(t);
+                        if !norm.trim().is_empty() && norm.chars().any(|c| c.is_alphanumeric()) {
+                            let canon = norm.clone();
+                            let coord = ApeironCoord::from_str_canonical(&canon);
+                            items.push(ExtractedItem {
+                                coord,
+                                key: None,
+                                terms: vec![ApeironTerm::Text(norm)],
+                                canonical_text: canon,
+                                context: Some(format!("Text in <{tag}>")),
+                                locations: vec![SourceLocation {
+                                    file_path: file_path.to_string(),
+                                    line: *line,
+                                    column: *col,
+                                }],
+                            });
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        } else {
+            // Leaf element or non-container: extract terms
+            let mut terms = Vec::new();
+            let mut tag_counter = 0;
+            let mut slot_counter = 0;
+            jsx_nodes_to_terms(children, &mut terms, &mut tag_counter, &mut slot_counter);
+
+            let normalized = ApeironTerm::normalize_sequence(terms);
+            if has_translatable_content(&normalized) {
+                let canon = ApeironTerm::to_canonical_string(&normalized);
+                let coord = ApeironCoord::from_str_canonical(&canon);
+                items.push(ExtractedItem {
+                    coord,
+                    key: None,
+                    terms: normalized,
+                    canonical_text: canon,
+                    context: Some(format!("JSX <{tag}> in {file_path}:{line}")),
+                    locations: vec![SourceLocation {
+                        file_path: file_path.to_string(),
+                        line: *line,
+                        column: *col,
+                    }],
+                });
+            }
+        }
+    }
+}
+
+fn jsx_nodes_to_terms(
+    nodes: &[JsxNode],
+    terms: &mut Vec<ApeironTerm>,
+    tag_counter: &mut usize,
+    slot_counter: &mut usize,
+) {
+    for node in nodes {
+        match node {
+            JsxNode::Text(t) => {
+                terms.push(ApeironTerm::Text(t.clone()));
+            }
+            JsxNode::Slot(name) => {
+                terms.push(ApeironTerm::Slot {
+                    id: *slot_counter,
+                    name: name.clone(),
+                    raw_expr: Some(name.clone()),
+                });
+                *slot_counter += 1;
+            }
+            JsxNode::Element { tag, children, .. } => {
+                let tag_id = *tag_counter;
+                *tag_counter += 1;
+                let mut sub_terms = Vec::new();
+                jsx_nodes_to_terms(children, &mut sub_terms, tag_counter, slot_counter);
+                terms.push(ApeironTerm::Tag {
+                    id: tag_id,
+                    tag: tag.clone(),
+                    attrs: Vec::new(),
+                    children: sub_terms,
+                });
+            }
+        }
+    }
+}
+
 fn has_translatable_content(terms: &[ApeironTerm]) -> bool {
     terms.iter().any(|t| match t {
         ApeironTerm::Text(s) => s.chars().any(|c| c.is_alphanumeric()),
@@ -91,19 +227,17 @@ fn has_translatable_content(terms: &[ApeironTerm]) -> bool {
     })
 }
 
-/// Parse a JSX element starting at '<'.
-/// Returns (new_index, child_terms, extracted_attribute_items)
-fn parse_jsx_element(
+fn parse_jsx_element_node(
     chars: &[char],
     start: usize,
     line: &mut usize,
     col: &mut usize,
-    file_path: &str,
-) -> Option<(usize, Vec<ApeironTerm>, Vec<ExtractedItem>)> {
+) -> Option<(usize, JsxNode)> {
     let mut i = start + 1; // skip '<'
+    let tag_line = *line;
+    let tag_col = *col;
     let mut tag_name = String::new();
 
-    // Read tag name
     while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '.' || chars[i] == '-' || chars[i] == '_') {
         tag_name.push(chars[i]);
         i += 1;
@@ -113,13 +247,11 @@ fn parse_jsx_element(
         return None;
     }
 
-    // Skip non-translatable tags
     let is_ignored = tag_name == "script" || tag_name == "style" || tag_name == "code" || tag_name == "pre";
-
-    let mut attr_items = Vec::new();
+    let mut attrs = Vec::new();
     let mut is_self_closing = false;
 
-    // Parse attributes until '>' or '/>'
+    // Parse attributes
     while i < chars.len() {
         skip_ws(chars, &mut i, line, col);
         if i >= chars.len() {
@@ -136,9 +268,6 @@ fn parse_jsx_element(
             break;
         }
 
-        // Read attribute name
-        let attr_line = *line;
-        let attr_col = *col;
         let mut attr_name = String::new();
         while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '-' || chars[i] == '_') {
             attr_name.push(chars[i]);
@@ -147,7 +276,7 @@ fn parse_jsx_element(
 
         skip_ws(chars, &mut i, line, col);
         if i < chars.len() && chars[i] == '=' {
-            i += 1; // skip '='
+            i += 1;
             skip_ws(chars, &mut i, line, col);
             if i < chars.len() {
                 if chars[i] == '"' || chars[i] == '\'' {
@@ -162,29 +291,10 @@ fn parse_jsx_element(
                         i += 1;
                     }
                     if i < chars.len() {
-                        i += 1; // skip closing quote
+                        i += 1;
                     }
-
-                    // If attribute is translatable
-                    if TRANSLATABLE_ATTRS.contains(&attr_name.as_str()) && !attr_val.trim().is_empty() {
-                        let trimmed = attr_val.trim().to_string();
-                        let canon = trimmed.clone();
-                        let coord = ApeironCoord::from_str_canonical(&canon);
-                        attr_items.push(ExtractedItem {
-                            coord,
-                            key: None,
-                            terms: vec![ApeironTerm::Text(trimmed.clone())],
-                            canonical_text: canon,
-                            context: Some(format!("Attribute {attr_name} in {tag_name}")),
-                            locations: vec![SourceLocation {
-                                file_path: file_path.to_string(),
-                                line: attr_line,
-                                column: attr_col,
-                            }],
-                        });
-                    }
+                    attrs.push((attr_name, attr_val));
                 } else if chars[i] == '{' {
-                    // JSX expression attribute, skip to matching '}'
                     let _ = skip_curly(chars, &mut i, line, col);
                 }
             }
@@ -192,61 +302,62 @@ fn parse_jsx_element(
     }
 
     if is_self_closing || is_ignored {
-        return Some((i, Vec::new(), attr_items));
+        return Some((
+            i,
+            JsxNode::Element {
+                tag: tag_name,
+                line: tag_line,
+                col: tag_col,
+                attrs,
+                children: Vec::new(),
+            },
+        ));
     }
 
-    // Now parse children until matching closing tag `</tag_name>`
+    // Parse children until matching </tag_name>
     let mut children = Vec::new();
     let mut slot_counter = 0;
-    let mut tag_counter = 0;
 
     while i < chars.len() {
-        // Check for closing tag of this element
+        // Closing tag check
         if chars[i] == '<' && i + 1 < chars.len() && chars[i + 1] == '/' {
             let mut close_idx = i + 2;
             let mut close_tag = String::new();
-            while close_idx < chars.len() && (chars[close_idx].is_alphanumeric() || chars[close_idx] == '.' || chars[close_idx] == '-' || chars[close_idx] == '_') {
+            while close_idx < chars.len()
+                && (chars[close_idx].is_alphanumeric()
+                    || chars[close_idx] == '.'
+                    || chars[close_idx] == '-'
+                    || chars[close_idx] == '_')
+            {
                 close_tag.push(chars[close_idx]);
                 close_idx += 1;
             }
             skip_ws(chars, &mut close_idx, line, col);
-            if close_idx < chars.len() && chars[close_idx] == '>' && close_tag == tag_name {
-                i = close_idx + 1;
+            if close_idx < chars.len() && chars[close_idx] == '>' {
+                if close_tag == tag_name {
+                    i = close_idx + 1;
+                }
                 break;
             }
         }
 
         // Child JSX element
         if chars[i] == '<' && i + 1 < chars.len() && chars[i + 1].is_ascii_alphabetic() {
-            if let Some((new_idx, sub_terms, sub_attrs)) =
-                parse_jsx_element(chars, i, line, col, file_path)
-            {
-                attr_items.extend(sub_attrs);
-                let tag_id = tag_counter;
-                tag_counter += 1;
-                children.push(ApeironTerm::Tag {
-                    id: tag_id,
-                    tag: "tag".to_string(),
-                    attrs: Vec::new(),
-                    children: sub_terms,
-                });
+            if let Some((new_idx, child_node)) = parse_jsx_element_node(chars, i, line, col) {
+                children.push(child_node);
                 i = new_idx;
                 continue;
             }
         }
 
-        // JSX expression child `{expr}`
+        // JSX expression child {expr}
         if chars[i] == '{' {
             let expr_start = i + 1;
             if let Some(expr_end) = skip_curly(chars, &mut i, line, col) {
                 let expr_str: String = chars[expr_start..expr_end].iter().collect();
                 let trimmed = expr_str.trim();
                 let name = sanitize_slot_name(trimmed, slot_counter);
-                children.push(ApeironTerm::Slot {
-                    id: slot_counter,
-                    name,
-                    raw_expr: Some(trimmed.to_string()),
-                });
+                children.push(JsxNode::Slot(name));
                 slot_counter += 1;
                 continue;
             }
@@ -267,11 +378,20 @@ fn parse_jsx_element(
 
         let norm = normalize_whitespace(&text);
         if !norm.trim().is_empty() {
-            children.push(ApeironTerm::Text(norm));
+            children.push(JsxNode::Text(norm));
         }
     }
 
-    Some((i, children, attr_items))
+    Some((
+        i,
+        JsxNode::Element {
+            tag: tag_name,
+            line: tag_line,
+            col: tag_col,
+            attrs,
+            children,
+        },
+    ))
 }
 
 fn skip_ws(chars: &[char], i: &mut usize, line: &mut usize, col: &mut usize) {
@@ -292,17 +412,31 @@ fn skip_curly(chars: &[char], i: &mut usize, line: &mut usize, col: &mut usize) 
     }
     *i += 1;
     let mut depth = 1;
+    let mut in_quote = None;
+
     while *i < chars.len() && depth > 0 {
-        if chars[*i] == '{' {
-            depth += 1;
-        } else if chars[*i] == '}' {
-            depth -= 1;
-            if depth == 0 {
-                let end = *i;
+        let c = chars[*i];
+        if let Some(q) = in_quote {
+            if c == '\\' && *i + 1 < chars.len() {
                 *i += 1;
-                return Some(end);
+            } else if c == q {
+                in_quote = None;
             }
-        } else if chars[*i] == '\n' {
+        } else {
+            if c == '"' || c == '\'' || c == '`' {
+                in_quote = Some(c);
+            } else if c == '{' {
+                depth += 1;
+            } else if c == '}' {
+                depth -= 1;
+                if depth == 0 {
+                    let end = *i;
+                    *i += 1;
+                    return Some(end);
+                }
+            }
+        }
+        if c == '\n' {
             *line += 1;
             *col = 1;
         } else {
@@ -313,16 +447,16 @@ fn skip_curly(chars: &[char], i: &mut usize, line: &mut usize, col: &mut usize) 
     None
 }
 
-/// Creates a safe identifier for slot from expression.
+/// Creates a safe identifier for slot from expression, preserving property dots.
 fn sanitize_slot_name(expr: &str, fallback_id: usize) -> String {
-    let clean: String = expr
+    let trimmed = expr.trim();
+    let clean: String = trimmed
         .chars()
-        .map(|c| if c == '.' { '_' } else { c })
-        .filter(|c| c.is_alphanumeric() || *c == '_')
+        .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '.')
         .collect();
-    if clean.is_empty() || clean.chars().next().unwrap().is_numeric() {
+    if clean.is_empty() || clean.starts_with(|c: char| c.is_numeric()) {
         format!("var{fallback_id}")
-    } else if clean.len() > 20 {
+    } else if clean.len() > 40 {
         format!("var{fallback_id}")
     } else {
         clean
