@@ -2,12 +2,14 @@
 
 pub mod gate;
 pub mod lorelake;
+pub mod pii;
 pub mod providers;
 pub mod pseudo;
 pub mod tm;
 
 use async_trait::async_trait;
 use gate::{ApeironNullGate, GateViolation};
+pub use pii::PiiSession;
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -49,13 +51,24 @@ impl TranslationEngine {
         Self { provider }
     }
 
-    /// Translate a slice of source canonical strings, enforcing the Apeiron Null-Gate.
+    /// Translate a slice of source canonical strings, enforcing in-memory PII redaction
+    /// and the Apeiron Null-Gate.
     pub async fn translate_and_verify(
         &self,
         sources: &[String],
         target_locale: &str,
     ) -> Result<Vec<String>, EngineError> {
-        let raw_translations = self.provider.translate_batch(sources, target_locale).await?;
+        // 1. Redact PII in memory before dispatching to external LLMs
+        let mut pii_sessions: Vec<PiiSession> = Vec::with_capacity(sources.len());
+        let mut redacted_sources: Vec<String> = Vec::with_capacity(sources.len());
+        for src in sources {
+            let mut session = PiiSession::new();
+            let redacted = session.redact(src);
+            pii_sessions.push(session);
+            redacted_sources.push(redacted);
+        }
+
+        let raw_translations = self.provider.translate_batch(&redacted_sources, target_locale).await?;
 
         if raw_translations.len() != sources.len() {
             return Err(EngineError::Api(format!(
@@ -66,10 +79,12 @@ impl TranslationEngine {
         }
 
         let mut verified = Vec::with_capacity(raw_translations.len());
-        for (src, trans) in sources.iter().zip(raw_translations) {
-            // Validate through the Apeiron Null-Gate
-            ApeironNullGate::validate(src, &trans)?;
-            verified.push(trans);
+        for ((src, trans), pii) in sources.iter().zip(raw_translations).zip(pii_sessions) {
+            // 2. Restore exact PII values post-translation
+            let restored = pii.restore(&trans);
+            // 3. Validate through the Apeiron Null-Gate
+            ApeironNullGate::validate(src, &restored)?;
+            verified.push(restored);
         }
 
         Ok(verified)

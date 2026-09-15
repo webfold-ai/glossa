@@ -3,7 +3,7 @@ name = "glossa"
 version = "0.1.0"
 edition = "2021"
 description = "Universal sovereign multi-framework localization compiler and CI/CD verification engine. 2,300x faster, 85%+ cheaper drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin."
-license = "MIT OR Apache-2.0"
+license = "FSL-1.1-ALv2"
 repository = "https://github.com/Ptyktos/glossa"
 
 [[bin]]
