@@ -701,6 +701,105 @@ export const Textarea: FC<
         }
     }
 
+    /// Shared helper: run extract_jsx on a background thread with a 3s
+    /// bound, panicking with a clear message (not hanging) if it doesn't
+    /// return in time.
+    fn extract_jsx_bounded(source: &'static str, label: &'static str) {
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let items = extract_jsx(source, "test.tsx");
+            let _ = tx.send(items.len());
+        });
+        if rx.recv_timeout(std::time::Duration::from_secs(3)).is_err() {
+            panic!("extract_jsx hung for >3s on case: {label}");
+        }
+    }
+
+    #[test]
+    fn test_bisect_case_1_type_signature_only() {
+        extract_jsx_bounded(
+            r#"
+            export const Textarea: FC<
+              DetailedHTMLProps<
+                InputHTMLAttributes<HTMLTextAreaElement>,
+                HTMLTextAreaElement
+              > & {
+                error?: any;
+                translationParams?: Record<string, string | number>;
+              }
+            > = (props) => {
+              return <div></div>;
+            };
+            "#,
+            "type_signature_only",
+        );
+    }
+
+    #[test]
+    fn test_bisect_case_2_textarea_spread_tag_only() {
+        extract_jsx_bounded(
+            r#"
+            function C(props: any) {
+              const { className, ...rest } = props;
+              return (
+                <textarea
+                  {...(props.disableForm ? {} : form.register(props.name))}
+                  className={clsx('a', className)}
+                  {...rest}
+                />
+              );
+            }
+            "#,
+            "textarea_spread_tag_only",
+        );
+    }
+
+    #[test]
+    fn test_bisect_case_3_fragment_in_expression_only() {
+        extract_jsx_bounded(
+            r#"
+            function C() {
+              return <div className="a">{err || <>&nbsp;</>}</div>;
+            }
+            "#,
+            "fragment_in_expression_only",
+        );
+    }
+
+    #[test]
+    fn test_bisect_case_4_nested_divs_and_component_only() {
+        extract_jsx_bounded(
+            r#"
+            function C(props: any) {
+              return (
+                <div className={clsx('flex flex-col gap-[6px]', props.disabled && 'opacity-50')}>
+                  <div className={`text-[14px]`}>
+                    <TranslatedLabel label={label} translationKey={translationKey} translationParams={translationParams} />
+                  </div>
+                </div>
+              );
+            }
+            "#,
+            "nested_divs_and_component_only",
+        );
+    }
+
+    #[test]
+    fn test_bisect_case_5_optional_chaining_index_only() {
+        extract_jsx_bounded(
+            r#"
+            function C(props: any) {
+              const err = useMemo(() => {
+                if (!form || !form.formState.errors[props?.name!]) return;
+                return form?.formState?.errors?.[props?.name!]?.message! as string;
+              }, [form?.formState?.errors?.[props?.name!]?.message, error]);
+              return <div>{err}</div>;
+            }
+            "#,
+            "optional_chaining_index_only",
+        );
+    }
+
     #[test]
     fn test_extract_jsx_basic() {
         let jsx = r#"
