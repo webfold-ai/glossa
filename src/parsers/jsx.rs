@@ -895,6 +895,99 @@ export const Textarea: FC<
         );
     }
 
+    /// Case 7 (real type sig + trivial body) passed; case 6 (trivial type
+    /// sig + real body) hangs -- so the bug is entirely within the body:
+    /// destructuring + useMemo + the full real JSX, together. Narrowing
+    /// further within the body.
+    #[test]
+    fn test_bisect_case_8_body_without_destructuring() {
+        extract_jsx_bounded(
+            r#"
+export const Textarea: any = (props: any) => {
+  const form = useFormContext();
+  const err = useMemo(() => {
+    if (props.error) return props.error;
+    if (!form || !form.formState.errors[props?.name!]) return;
+    return form?.formState?.errors?.[props?.name!]?.message! as string;
+  }, [form?.formState?.errors?.[props?.name!]?.message, props.error]);
+  return (
+    <div
+      className={clsx(
+        'flex flex-col gap-[6px]',
+        props.disabled && 'opacity-50'
+      )}
+    >
+      <div className={`text-[14px]`}>
+        <TranslatedLabel
+          label={props.label}
+          translationKey={props.translationKey}
+          translationParams={props.translationParams}
+        />
+      </div>
+      <textarea
+        {...(props.disableForm ? {} : form.register(props.name))}
+        className={clsx(
+          'bg-input min-h-[150px] p-[16px] outline-none border-fifth border rounded-[4px] text-inputText placeholder-inputText',
+          props.className
+        )}
+        {...props}
+      />
+      <div className="text-red-400 text-[12px]">{err || <>&nbsp;</>}</div>
+    </div>
+  );
+};
+"#,
+            "body_without_destructuring",
+        );
+    }
+
+    #[test]
+    fn test_bisect_case_9_body_without_usememo() {
+        extract_jsx_bounded(
+            r#"
+export const Textarea: any = (props: any) => {
+  const {
+    label,
+    className,
+    disableForm,
+    error,
+    translationKey,
+    translationParams,
+    ...rest
+  } = props;
+  const form = useFormContext();
+  const err = null;
+  return (
+    <div
+      className={clsx(
+        'flex flex-col gap-[6px]',
+        props.disabled && 'opacity-50'
+      )}
+    >
+      <div className={`text-[14px]`}>
+        <TranslatedLabel
+          label={label}
+          translationKey={translationKey}
+          translationParams={translationParams}
+        />
+      </div>
+      <textarea
+        {...(disableForm ? {} : form.register(props.name))}
+        className={clsx(
+          'bg-input min-h-[150px] p-[16px] outline-none border-fifth border rounded-[4px] text-inputText placeholder-inputText',
+          className
+        )}
+        {...rest}
+      />
+      <div className="text-red-400 text-[12px]">{err || <>&nbsp;</>}</div>
+    </div>
+  );
+};
+"#,
+            "body_without_usememo",
+        );
+    }
+
     #[test]
     fn test_extract_jsx_basic() {
         let jsx = r#"
