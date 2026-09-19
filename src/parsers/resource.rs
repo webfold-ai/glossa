@@ -666,6 +666,41 @@ pub fn parse_interpolated_string(s: &str) -> Vec<ApeironTerm> {
             continue;
         }
 
+        // Inlang/Paraglide message reference `@:identifier` (dotted paths
+        // allowed, e.g. `@:chat.changeFormat.text`) — a project-configurable
+        // `variableReferencePattern`, but `@:` is the convention's own
+        // documented default and the one in active use. Found by testing
+        // against AppFlowy-IO/AppFlowy's real production translation catalog
+        // (frontend/resources/translations/en-US.json, whose own
+        // project.inlang/settings.json declares `variableReferencePattern:
+        // ["@:"]`): 44 occurrences in that one file, e.g. "Welcome to
+        // @:appName" — a live substitution of another key's value, not
+        // translatable text. Without this, a translation provider would see
+        // the literal characters "@:appName" as English words to translate,
+        // corrupting the reference for every non-English locale.
+        if chars[i] == '@' && i + 1 < chars.len() && chars[i + 1] == ':' {
+            let ident_start = i + 2;
+            let mut j = ident_start;
+            while j < chars.len() && (chars[j].is_alphanumeric() || chars[j] == '_' || chars[j] == '.') {
+                j += 1;
+            }
+            if j > ident_start {
+                if !buf.is_empty() {
+                    terms.push(ApeironTerm::Text(buf.clone()));
+                    buf.clear();
+                }
+                let name: String = chars[ident_start..j].iter().collect();
+                terms.push(ApeironTerm::Slot {
+                    id: slot_id,
+                    name: name.clone(),
+                    raw_expr: Some(format!("@:{name}")),
+                });
+                slot_id += 1;
+                i = j;
+                continue;
+            }
+        }
+
         // C-style printf `%s` or `%d`
         if chars[i] == '%' && i + 1 < chars.len() && (chars[i + 1] == 's' || chars[i + 1] == 'd') {
             if !buf.is_empty() {

@@ -19,6 +19,7 @@ use glossa::parsers::resource::{
 };
 use glossa::parsers::svelte::extract_svelte;
 use glossa::parsers::vue::extract_vue;
+use glossa::ir::term::ApeironTerm;
 use std::collections::BTreeMap;
 
 // =========================================================================
@@ -400,6 +401,54 @@ fn test_regression_android_xml_named_entities_and_malformed_fallback() {
     // rather than the decoder eating "amp Handling" looking for a ';'.
     let malformed = items.iter().find(|i| i.key.as_deref() == Some("not_an_entity")).unwrap();
     assert!(malformed.canonical_text.contains('&'), "malformed entity must fall back to a literal '&', not silently drop text");
+}
+
+// =========================================================================
+// 10b. INLANG MESSAGE REFERENCES IN REAL JSON CATALOGS
+// =========================================================================
+
+/// Real fixture: verbatim entries from `AppFlowy-IO/AppFlowy`'s actual
+/// production translation catalog
+/// (`frontend/resources/translations/en-US.json`, a real, live inlang user
+/// whose own `project.inlang/settings.json` declares
+/// `variableReferencePattern: ["@:"]`). 44 occurrences of `@:identifier`
+/// message references exist in that one real file. Regression guard for a
+/// gap found by testing extraction against it: `@:appName` was extracted as
+/// plain translatable text with no slot, so a translation provider would see
+/// the literal characters "@:appName" as English words rather than a
+/// verbatim cross-reference to another key's value.
+#[test]
+fn test_regression_inlang_message_reference_real_world_appflowy() {
+    let json = r#"{
+        "appName": "AppFlowy",
+        "welcomeText": "Welcome to @:appName",
+        "signUp": {
+            "title": "Sign Up to @:appName"
+        },
+        "chat": {
+            "changeFormat": { "text": "Text" },
+            "textWithImageDescription": "@:chat.changeFormat.text with image"
+        }
+    }"#;
+
+    let items = extract_json(json, "translations/en-US.json");
+
+    let welcome = items.iter().find(|i| i.key.as_deref() == Some("welcomeText")).unwrap();
+    assert!(
+        welcome.terms.iter().any(|t| matches!(t, ApeironTerm::Slot { name, .. } if name == "appName")),
+        "`@:appName` must become a Slot term, not get flattened into plain translatable text"
+    );
+
+    let signup = items.iter().find(|i| i.key.as_deref() == Some("signUp.title")).unwrap();
+    assert!(signup.terms.iter().any(|t| matches!(t, ApeironTerm::Slot { name, .. } if name == "appName")));
+
+    // Dotted-path reference (@:chat.changeFormat.text) must be captured whole,
+    // not truncated at the first '.' the way a bare identifier scan might.
+    let nested_ref = items.iter().find(|i| i.key.as_deref() == Some("chat.textWithImageDescription")).unwrap();
+    assert!(
+        nested_ref.terms.iter().any(|t| matches!(t, ApeironTerm::Slot { name, .. } if name == "chat.changeFormat.text")),
+        "dotted-path message reference must be captured in full: {:?}", nested_ref.terms
+    );
 }
 
 // =========================================================================
