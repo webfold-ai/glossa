@@ -3,7 +3,7 @@
 //! Automatically imports existing configurations and catalogs from:
 //! - Lingo.dev (`i18n.json`/`i18n.lock` — current naming; `lingo.json`/`lingo.lock` — legacy)
 //! - Inlang / Paraglide (`project.inlang/settings.json`)
-//! - Tolgee (`tolgee.json`, `.tolgee`)
+//! - Tolgee (`.tolgeerc`/`.tolgeerc.json` and variants, `tolgee.config.{js,cjs}`)
 //! - Crowdin (`crowdin.yml`, `crowdin.yaml`)
 //! - Lokalise (`lokalise.yml`, `lokalise.json`)
 //! - i18next (`i18next-parser.config.js`, `next-i18next.config.js`)
@@ -42,6 +42,12 @@ pub struct DetectedImport {
     pub source_locale: Option<String>,
     pub target_locales: Vec<String>,
     pub format: Option<String>,
+    /// Source-file glob patterns pulled from the incumbent's own config
+    /// (Tolgee's `patterns`, Crowdin's `files[].source`). Real-world Tolgee
+    /// and Crowdin configs manage target locales on the platform side, not
+    /// in this file, so these patterns are often the only concrete signal
+    /// actually available locally.
+    pub include_patterns: Vec<String>,
 }
 
 /// Scans a directory to detect incumbent i18n configurations for drop-in migration.
@@ -64,6 +70,7 @@ pub fn detect_incumbent_systems(root: &Path) -> Vec<DetectedImport> {
             source_locale: src,
             target_locales: targets,
             format: fmt,
+            include_patterns: Vec::new(),
         });
     } else if lingo_json.exists() {
         let (src, targets, fmt) = parse_lingo_json(&lingo_json);
@@ -73,6 +80,7 @@ pub fn detect_incumbent_systems(root: &Path) -> Vec<DetectedImport> {
             source_locale: src,
             target_locales: targets,
             format: fmt,
+            include_patterns: Vec::new(),
         });
     }
 
@@ -87,34 +95,61 @@ pub fn detect_incumbent_systems(root: &Path) -> Vec<DetectedImport> {
             source_locale: src,
             target_locales: targets,
             format: Some("json".to_string()),
+            include_patterns: Vec::new(),
         });
     }
 
-    // 3. Check Tolgee
-    let tolgee_json = root.join("tolgee.json");
-    let tolgee_dot = root.join(".tolgee");
-    if tolgee_json.exists() || tolgee_dot.exists() {
-        let cfg_path = if tolgee_json.exists() { tolgee_json } else { tolgee_dot };
-        detected.push(DetectedImport {
-            system: IncumbentSystem::Tolgee,
-            config_file: cfg_path,
-            source_locale: Some("en".to_string()),
-            target_locales: Vec::new(),
-            format: Some("json".to_string()),
-        });
+    // 3. Check Tolgee. Real Tolgee CLI configs (verified against
+    // satisfactorymodding/SatisfactoryModManager and Tolgee's own
+    // webapp/.tolgeerc.json) are named `.tolgeerc`/`.tolgeerc.json` (or the
+    // `.yaml`/`.yml`/`.js`/`.cjs` variants, or `tolgee.config.{js,cjs}`) —
+    // never `tolgee.json` or bare `.tolgee`, which this used to check for
+    // exclusively and so never matched a single real project. Real configs
+    // also carry no source/target locale list at all (that's managed on the
+    // Tolgee platform, keyed by `projectId`) — but they do carry `patterns`,
+    // the actual source-file globs, which is real signal worth keeping.
+    for name in &[
+        ".tolgeerc",
+        ".tolgeerc.json",
+        ".tolgeerc.yaml",
+        ".tolgeerc.yml",
+        ".tolgeerc.js",
+        ".tolgeerc.cjs",
+        "tolgee.config.js",
+        "tolgee.config.cjs",
+    ] {
+        let p = root.join(name);
+        if p.exists() {
+            let patterns = parse_tolgeerc_patterns(&p);
+            detected.push(DetectedImport {
+                system: IncumbentSystem::Tolgee,
+                config_file: p,
+                source_locale: Some("en".to_string()),
+                target_locales: Vec::new(),
+                format: Some("json".to_string()),
+                include_patterns: patterns,
+            });
+            break;
+        }
     }
 
-    // 4. Check Crowdin
+    // 4. Check Crowdin. Real crowdin.yml files (verified against
+    // DS-Homebrew/TWiLightMenu and mendhak/gpslogger) declare a `files:`
+    // source/translation path mapping, not a `source_language:`/`languages:`
+    // list — those keys are kept as a fallback for configs that do set them,
+    // but `files[].source` is the concrete signal actually present in the
+    // common case.
     for name in &["crowdin.yml", "crowdin.yaml"] {
         let p = root.join(name);
         if p.exists() {
-            let (src, targets) = parse_crowdin_yaml(&p);
+            let (src, targets, patterns) = parse_crowdin_yaml(&p);
             detected.push(DetectedImport {
                 system: IncumbentSystem::Crowdin,
                 config_file: p,
                 source_locale: src,
                 target_locales: targets,
                 format: Some("yaml".to_string()),
+                include_patterns: patterns,
             });
             break;
         }
@@ -130,6 +165,7 @@ pub fn detect_incumbent_systems(root: &Path) -> Vec<DetectedImport> {
                 source_locale: Some("en".to_string()),
                 target_locales: Vec::new(),
                 format: Some("json".to_string()),
+                include_patterns: Vec::new(),
             });
             break;
         }
@@ -147,6 +183,7 @@ pub fn detect_incumbent_systems(root: &Path) -> Vec<DetectedImport> {
                 source_locale: Some("en".to_string()),
                 target_locales: Vec::new(),
                 format: Some("json".to_string()),
+                include_patterns: Vec::new(),
             });
             break;
         }
@@ -169,6 +206,11 @@ pub fn import_to_glossa_config(import: &DetectedImport, base_config: &mut LingoC
     }
     if let Some(fmt) = &import.format {
         base_config.output_format = fmt.clone();
+    }
+    for pattern in &import.include_patterns {
+        if !base_config.include.contains(pattern) {
+            base_config.include.push(pattern.clone());
+        }
     }
 }
 
@@ -236,25 +278,55 @@ fn parse_inlang_settings(path: &Path) -> (Option<String>, Vec<String>) {
     (None, Vec::new())
 }
 
-fn parse_crowdin_yaml(path: &Path) -> (Option<String>, Vec<String>) {
+/// Parses a real Crowdin `crowdin.yml`. The common real-world shape (verified
+/// against `DS-Homebrew/TWiLightMenu` and `mendhak/gpslogger`) is a `files:`
+/// list of `source:`/`translation:` path pairs with no `source_language:` or
+/// `languages:` keys at all — those are kept below for configs that do set
+/// them, but `files[].source` is the signal actually present in practice.
+fn parse_crowdin_yaml(path: &Path) -> (Option<String>, Vec<String>, Vec<String>) {
     let mut src = None;
     let mut targets = Vec::new();
+    let mut sources = Vec::new();
+    let mut in_languages = false;
     if let Ok(content) = fs::read_to_string(path) {
         for line in content.lines() {
             let trimmed = line.trim();
-            if trimmed.starts_with("source_language:") {
-                src = trimmed.split(':').nth(1).map(|s| s.trim().trim_matches('"').to_string());
+            if let Some(rest) = trimmed.strip_prefix("source_language:") {
+                src = Some(rest.trim().trim_matches('"').to_string());
+                in_languages = false;
             } else if trimmed.starts_with("languages:") {
-                // Parse simple array format
-            } else if trimmed.starts_with("- ") && targets.len() < 20 {
+                in_languages = true;
+            } else if let Some(rest) = trimmed.strip_prefix("- source:") {
+                sources.push(rest.trim().trim_matches('"').to_string());
+                in_languages = false;
+            } else if trimmed.starts_with("- ") && in_languages && targets.len() < 20 {
                 let loc = trimmed.trim_start_matches("- ").trim().trim_matches('"');
                 if loc.len() == 2 || loc.contains('-') || loc.contains('_') {
                     targets.push(loc.to_string());
                 }
+            } else if !trimmed.starts_with('-') && !trimmed.is_empty() {
+                in_languages = false;
             }
         }
     }
-    (src, targets)
+    (src, targets, sources)
+}
+
+/// Parses the `patterns` array (source-file globs) out of a real Tolgee
+/// `.tolgeerc.json`. Only the JSON variants are parsed here — `.tolgeerc.js`/
+/// `.tolgeerc.cjs`/`tolgee.config.{js,cjs}` are detected by filename only,
+/// since they're executable JS, not data.
+fn parse_tolgeerc_patterns(path: &Path) -> Vec<String> {
+    if let Ok(content) = fs::read_to_string(path) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content) {
+            return v
+                .get("patterns")
+                .and_then(|a| a.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+                .unwrap_or_default();
+        }
+    }
+    Vec::new()
 }
 
 #[cfg(test)]
@@ -345,6 +417,109 @@ mod tests {
         assert_eq!(imports[0].target_locales, vec!["es"]);
     }
 
+    /// Real fixture: verbatim `.tolgeerc.json` from
+    /// `satisfactorymodding/SatisfactoryModManager` (a real, live Tolgee
+    /// user). Regression guard for the bug where glossa only checked for
+    /// `tolgee.json`/`.tolgee` — filenames that don't exist in any real
+    /// Tolgee project — so Tolgee was never detected at all.
+    #[test]
+    fn test_detect_tolgee_real_world_shape_satisfactory_mod_manager() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        let tolgeerc = r#"
+        {
+          "$schema": "https://tolgee.io/cli-schema.json",
+          "projectId": 4,
+          "apiUrl": "https://translate.ficsit.app",
+          "patterns": ["./src/**/*.ts?(x)", "./src/**/*.svelte"],
+          "pull": { "path": "./src/lib/generated/i18n" }
+        }
+        "#;
+        fs::write(root.join(".tolgeerc.json"), tolgeerc).unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1, "must detect Tolgee from the real .tolgeerc.json filename");
+        assert_eq!(imports[0].system, IncumbentSystem::Tolgee);
+        assert_eq!(
+            imports[0].include_patterns,
+            vec!["./src/**/*.ts?(x)", "./src/**/*.svelte"],
+            "must pull the real source-file patterns, the only concrete signal a real Tolgee config carries locally"
+        );
+    }
+
+    /// Second independent real fixture — Tolgee's own dogfooding config at
+    /// `tolgee/tolgee-platform`'s `webapp/.tolgeerc.json`. Same shape family,
+    /// different project, confirming this isn't a one-off coincidence.
+    #[test]
+    fn test_detect_tolgee_real_world_shape_tolgee_platform_dogfood() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(
+            root.join(".tolgeerc.json"),
+            r#"{"$schema": "https://docs.tolgee.io/cli-schema.json", "projectId": 1, "patterns": ["./src/**/*.ts?(x)"], "strictNamespace": false, "pull": {"path": "./src/i18n"}}"#,
+        )
+        .unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].system, IncumbentSystem::Tolgee);
+        assert_eq!(imports[0].include_patterns, vec!["./src/**/*.ts?(x)"]);
+    }
+
+    /// Real fixture: verbatim `crowdin.yml` from `DS-Homebrew/TWiLightMenu`
+    /// (a real, live Crowdin user). Regression guard for the bug where the
+    /// parser only looked for `source_language:`/`languages:` keys that
+    /// don't exist in this file, silently extracting nothing.
+    #[test]
+    fn test_detect_crowdin_real_world_shape_twilightmenu() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        let crowdin_yml = r#"project_id: 407378
+api_token_env: CROWDIN_TOKEN
+preserve_hierarchy: true
+
+files:
+  - source: /manual/nitrofiles/languages/en/*
+    translation: /manual/nitrofiles/languages/%two_letters_code%/%original_file_name%
+  - source: /quickmenu/nitrofiles/languages/en/*
+    translation: /quickmenu/nitrofiles/languages/%two_letters_code%/%original_file_name%
+  - source: /settings/nitrofiles/languages/en/*
+    translation: /settings/nitrofiles/languages/%two_letters_code%/%original_file_name%
+"#;
+        fs::write(root.join("crowdin.yml"), crowdin_yml).unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].system, IncumbentSystem::Crowdin);
+        assert_eq!(
+            imports[0].include_patterns,
+            vec![
+                "/manual/nitrofiles/languages/en/*",
+                "/quickmenu/nitrofiles/languages/en/*",
+                "/settings/nitrofiles/languages/en/*",
+            ],
+            "must extract the real files[].source patterns since no source_language/languages keys exist"
+        );
+    }
+
+    /// Second independent real fixture — `mendhak/gpslogger`'s crowdin.yml,
+    /// a single-file mapping rather than TWiLightMenu's multi-file list.
+    #[test]
+    fn test_detect_crowdin_real_world_shape_gpslogger() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(
+            root.join("crowdin.yml"),
+            "files:\n  - source: /gpslogger/src/main/res/values/strings.xml\n    translation: /gpslogger/src/main/res/values-%two_letters_code%/strings.xml\n    translate_attributes: 0\n",
+        )
+        .unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].system, IncumbentSystem::Crowdin);
+        assert_eq!(imports[0].include_patterns, vec!["/gpslogger/src/main/res/values/strings.xml"]);
+    }
+
     #[test]
     fn test_detect_inlang_import() {
         let tmp = tempdir().unwrap();
@@ -363,5 +538,44 @@ mod tests {
         assert_eq!(imports.len(), 1);
         assert_eq!(imports[0].system, IncumbentSystem::Inlang);
         assert_eq!(imports[0].target_locales, vec!["de", "zh-CN"]);
+    }
+
+    /// Real fixture: verbatim `project.inlang/settings.json` from
+    /// `AppFlowy-IO/AppFlowy` (76.8k stars, a real, live inlang user).
+    /// Positive-confirmation regression guard — unlike the Lingo.dev/Tolgee/
+    /// Crowdin bugs, this path was already correct, but a real 30-language,
+    /// region-tagged (`pt-BR`/`zh-CN`/`fr-CA` style) fixture is worth locking
+    /// in so a future change can't silently break it.
+    #[test]
+    fn test_detect_inlang_real_world_shape_appflowy() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        let inlang_dir = root.join("project.inlang");
+        fs::create_dir_all(&inlang_dir).unwrap();
+        let settings = r#"
+        {
+          "$schema": "https://inlang.com/schema/project-settings",
+          "sourceLanguageTag": "en-US",
+          "languageTags": [
+            "en-US", "en-GB", "ar-SA", "ca-ES", "ckb-KU", "cs-CZ", "de-DE", "es-VE",
+            "eu-ES", "fa", "fr-CA", "fr-FR", "ga-IE", "he", "hu-HU", "id-ID", "it-IT",
+            "ja-JP", "ko-KR", "pl-PL", "pt-BR", "pt-PT", "ru-RU", "sv-SE", "th-TH",
+            "tr-TR", "uk-UA", "vi", "vi-VN", "zh-CN", "zh-TW"
+          ],
+          "modules": ["https://cdn.jsdelivr.net/npm/@inlang/plugin-i18next@4/dist/index.js"],
+          "plugin.inlang.i18next": {
+            "pathPattern": "./frontend/resources/translations/{languageTag}.json"
+          }
+        }
+        "#;
+        fs::write(inlang_dir.join("settings.json"), settings).unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].system, IncumbentSystem::Inlang);
+        assert_eq!(imports[0].source_locale.as_deref(), Some("en-US"));
+        assert_eq!(imports[0].target_locales.len(), 30, "31 total tags minus the source itself");
+        assert!(imports[0].target_locales.contains(&"zh-CN".to_string()));
+        assert!(!imports[0].target_locales.contains(&"en-US".to_string()), "source tag must be filtered out of targets");
     }
 }
