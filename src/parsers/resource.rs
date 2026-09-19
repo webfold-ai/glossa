@@ -259,11 +259,15 @@ pub fn extract_android_xml(source: &str, file_path: &str) -> Vec<ExtractedItem> 
             let content_start = actual_start + close_tag + 1;
             if let Some(end_tag) = source[content_start..].find("</string>") {
                 let content = &source[content_start..content_start + end_tag];
+                // Trim incidental XML pretty-print whitespace from the RAW
+                // content first, then decode entities — decoding before
+                // trimming would let `str::trim()` (which strips any
+                // Unicode-whitespace char, not just ASCII) eat a leading/
+                // trailing non-breaking space (&#160; -> U+00A0) that was
+                // meaningful decoded content, not source formatting.
                 let clean_content = decode_xml_entities(
-                    &content.replace("\\'", "'").replace("\\\"", "\"").replace("\\n", "\n"),
-                )
-                .trim()
-                .to_string();
+                    &content.trim().replace("\\'", "'").replace("\\\"", "\"").replace("\\n", "\n"),
+                );
 
                 if !clean_content.is_empty() {
                     let parsed_terms = parse_interpolated_string(&clean_content);
