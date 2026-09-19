@@ -3,9 +3,21 @@ stages:
   - test
   - i18n
 
+# Cargo.toml pulls hashtrinity via a relative path dependency
+# (`../fold/hashtrinity`), assuming a sibling checkout that only exists on a
+# dev machine with the full fold workspace cloned. A bare GitLab checkout of
+# just this repo has never had that sibling present, so `cargo test`/`cargo
+# run` have always failed immediately with "No such file or directory" here
+# — before this fix, no push to any branch had ever actually compiled in CI.
+.fetch_hashtrinity_dependency: &fetch_hashtrinity_dependency
+  - apt-get update -qq && apt-get install -y -qq git ca-certificates
+  - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/twn/ptyktos/hashtrinity.git" "${CI_PROJECT_DIR}/../fold/hashtrinity"
+
 test:cargo:
   stage: test
   image: rust:1.80-slim
+  before_script:
+    - *fetch_hashtrinity_dependency
   script:
     - cargo test --verbose
 
@@ -14,6 +26,8 @@ i18n:check:
   image: rust:1.80-slim
   variables:
     FAIL_ON_MISSING: "true"
+  before_script:
+    - *fetch_hashtrinity_dependency
   script:
     - cargo run --release -- check --ci --format=text
   artifacts:
