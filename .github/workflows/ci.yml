@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Build & test (real, on GitHub's own hosted runner)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # hashtrinity pulls in via a relative path dependency (../fold/hashtrinity)
+      # that assumes a sibling checkout; the extracted repo is itself a
+      # workspace whose real package lives one level deeper
+      # (hashtrinity/hashtrinity/), and it in turn depends on other private
+      # gitlab.tas.twn.network repos (e.g. lucas/apeiron) via cargo git
+      # dependencies that Cargo fetches directly during resolution. Wire
+      # GITLAB_TOKEN into git's own credential resolution for the whole host
+      # so both the manual clone and Cargo's internal fetches authenticate.
+      - name: Fetch private GitLab dependencies
+        run: |
+          git config --global "url.https://oauth2:${GITLAB_TOKEN}@gitlab.tas.twn.network/.insteadOf" "https://gitlab.tas.twn.network/"
+          rm -rf "${GITHUB_WORKSPACE}/../fold"
+          git clone --depth 1 "https://oauth2:${GITLAB_TOKEN}@gitlab.tas.twn.network/twn/ptyktos/hashtrinity.git" "${GITHUB_WORKSPACE}/../fold"
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+
+      - name: cargo test
+        run: cargo test --verbose
+
+      - name: cargo build --release
+        run: cargo build --release --bin glossa
+
+      - name: Real-world performance check — precise per-file timing on postiz-app
+        run: |
+          cp target/release/glossa /usr/local/bin/glossa
+          git clone --depth 1 https://github.com/gitroomhq/postiz-app.git /tmp/postiz
+          mkdir -p /tmp/timing-results
+          cd /tmp/postiz
+          find . -type f \( -name '*.js' -o -name '*.jsx' -o -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' -o -name '*.cjs' \) -not -path './.git/*' | while read -r f; do
+            rm -rf /tmp/bisect-one && mkdir -p /tmp/bisect-one
+            cp "$f" "/tmp/bisect-one/$(basename "$f")"
+            cd /tmp/bisect-one
+            t0=$(date +%s%N)
+            timeout 20 glossa extract > /dev/null 2>&1
+            rc=$?
+            t1=$(date +%s%N)
+            ms=$(( (t1 - t0) / 1000000 ))
+            echo "${ms}ms rc=${rc} $f" >> /tmp/timing-results/timings.txt
+            cd /tmp/postiz
+          done
+          sort -rn /tmp/timing-results/timings.txt > "${GITHUB_WORKSPACE}/timing-results.txt"
+          echo "=== slowest 30 files (ms, exit code, path) ==="
+          head -30 "${GITHUB_WORKSPACE}/timing-results.txt"
+          echo "=== summary stats ==="
+          awk '{print $1+0}' /tmp/timing-results/timings.txt > /tmp/ms-only.txt
+          python3 -c "
+          vals = sorted(int(l.strip()) for l in open('/tmp/ms-only.txt') if l.strip())
+          n = len(vals)
+          print(f'count={n} min={vals[0]}ms max={vals[-1]}ms mean={sum(vals)/n:.1f}ms p50={vals[n//2]}ms p90={vals[int(n*0.9)]}ms p99={vals[int(n*0.99)]}ms')
+          "
+
+      - name: Upload timing results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: timing-results
+          path: timing-results.txt
+          if-no-files-found: ignore
