@@ -56,6 +56,10 @@ i18n:check:
     - *fetch_hashtrinity_dependency
   script:
     - cargo run --release --bin glossa -- check --ci --format=text
+    # Regenerate spbench-results.json fresh every run, in the same
+    # environment being tested — it was previously a stale, hand-generated
+    # file committed to the repo and never actually refreshed by CI.
+    - cargo run --release --bin glossa -- bench --spbench --json-output spbench-results.json
   artifacts:
     when: always
     paths:
