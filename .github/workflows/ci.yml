@@ -24,10 +24,15 @@ jobs:
       # is an internal/VPN-only host public GitHub runners can't route to at
       # all (TLS handshake fails, not an auth failure). Using GitHub's
       # hashtrinity avoids needing that private network entirely.
+      # Ptyktos/hashtrinity is private. The default GITHUB_TOKEN this
+      # workflow runs with is scoped only to this repo, not other private
+      # repos in the org, so cloning it needs a real cross-repo PAT.
       - name: Fetch hashtrinity dependency (from GitHub, not GitLab)
         run: |
           rm -rf "${GITHUB_WORKSPACE}/../fold"
-          git clone --depth 1 "https://github.com/Ptyktos/hashtrinity.git" "${GITHUB_WORKSPACE}/../fold"
+          git clone --depth 1 "https://x-access-token:${GH_CROSS_REPO_TOKEN}@github.com/Ptyktos/hashtrinity.git" "${GITHUB_WORKSPACE}/../fold"
+        env:
+          GH_CROSS_REPO_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
 
       - name: cargo test
         run: cargo test --verbose
