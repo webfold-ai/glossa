@@ -988,6 +988,74 @@ export const Textarea: any = (props: any) => {
         );
     }
 
+    /// Neither destructuring nor useMemo alone matters -- both removals
+    /// still hang (cases 8, 9), and each of the 3 JSX children passed when
+    /// tested alone (cases 2, 3, 4). So it must be the SEQUENCE of multiple
+    /// sibling children under one parent <div> -- testing pairs to narrow
+    /// which combination triggers it.
+    #[test]
+    fn test_bisect_case_10_label_div_plus_textarea_siblings() {
+        extract_jsx_bounded(
+            r#"
+function C(props: any) {
+  return (
+    <div className={clsx('flex flex-col gap-[6px]', props.disabled && 'opacity-50')}>
+      <div className={`text-[14px]`}>
+        <TranslatedLabel label={props.label} translationKey={props.translationKey} translationParams={props.translationParams} />
+      </div>
+      <textarea
+        {...(props.disableForm ? {} : form.register(props.name))}
+        className={clsx('bg-input min-h-[150px] p-[16px] outline-none border-fifth border rounded-[4px] text-inputText placeholder-inputText', props.className)}
+        {...props}
+      />
+    </div>
+  );
+}
+"#,
+            "label_div_plus_textarea_siblings",
+        );
+    }
+
+    #[test]
+    fn test_bisect_case_11_textarea_plus_fragment_div_siblings() {
+        extract_jsx_bounded(
+            r#"
+function C(props: any) {
+  return (
+    <div className={clsx('flex flex-col gap-[6px]', props.disabled && 'opacity-50')}>
+      <textarea
+        {...(props.disableForm ? {} : form.register(props.name))}
+        className={clsx('bg-input min-h-[150px] p-[16px] outline-none border-fifth border rounded-[4px] text-inputText placeholder-inputText', props.className)}
+        {...props}
+      />
+      <div className="text-red-400 text-[12px]">{err || <>&nbsp;</>}</div>
+    </div>
+  );
+}
+"#,
+            "textarea_plus_fragment_div_siblings",
+        );
+    }
+
+    #[test]
+    fn test_bisect_case_12_label_div_plus_fragment_div_siblings() {
+        extract_jsx_bounded(
+            r#"
+function C(props: any) {
+  return (
+    <div className={clsx('flex flex-col gap-[6px]', props.disabled && 'opacity-50')}>
+      <div className={`text-[14px]`}>
+        <TranslatedLabel label={props.label} translationKey={props.translationKey} translationParams={props.translationParams} />
+      </div>
+      <div className="text-red-400 text-[12px]">{err || <>&nbsp;</>}</div>
+    </div>
+  );
+}
+"#,
+            "label_div_plus_fragment_div_siblings",
+        );
+    }
+
     #[test]
     fn test_extract_jsx_basic() {
         let jsx = r#"
