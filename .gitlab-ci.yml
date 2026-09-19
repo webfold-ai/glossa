@@ -17,8 +17,15 @@ stages:
 # clone to a scratch dir and place just the nested package at the exact path
 # Cargo.toml expects, rather than changing that path (which real local dev
 # against the fold monorepo still relies on).
+#
+# This runner persists /builds across job runs (confirmed: git checkout logs
+# "Reinitialized existing Git repository" rather than cloning fresh each
+# time) — only the glossa project's own checkout gets refreshed per job, so
+# anything written to a sibling path by an earlier attempt survives. `rm -rf`
+# the target first so this step is idempotent regardless of prior state.
 .fetch_hashtrinity_dependency: &fetch_hashtrinity_dependency
   - apt-get update -qq && apt-get install -y -qq git ca-certificates
+  - rm -rf /tmp/hashtrinity-src "${CI_PROJECT_DIR}/../fold/hashtrinity"
   - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/twn/ptyktos/hashtrinity.git" /tmp/hashtrinity-src
   - mkdir -p "${CI_PROJECT_DIR}/../fold"
   - cp -r /tmp/hashtrinity-src/hashtrinity "${CI_PROJECT_DIR}/../fold/hashtrinity"
