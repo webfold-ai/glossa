@@ -9,9 +9,19 @@ stages:
 # just this repo has never had that sibling present, so `cargo test`/`cargo
 # run` have always failed immediately with "No such file or directory" here
 # — before this fix, no push to any branch had ever actually compiled in CI.
+#
+# Cargo.toml's `../fold/hashtrinity` path matches the old fold-monorepo layout,
+# where `fold/hashtrinity/` was the package itself. The standalone extracted
+# `Ptyktos/hashtrinity` repo is a workspace whose real package lives one level
+# deeper, at `hashtrinity/hashtrinity/` (members = ["hashtrinity", ...]) — so
+# clone to a scratch dir and place just the nested package at the exact path
+# Cargo.toml expects, rather than changing that path (which real local dev
+# against the fold monorepo still relies on).
 .fetch_hashtrinity_dependency: &fetch_hashtrinity_dependency
   - apt-get update -qq && apt-get install -y -qq git ca-certificates
-  - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/twn/ptyktos/hashtrinity.git" "${CI_PROJECT_DIR}/../fold/hashtrinity"
+  - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/twn/ptyktos/hashtrinity.git" /tmp/hashtrinity-src
+  - mkdir -p "${CI_PROJECT_DIR}/../fold"
+  - cp -r /tmp/hashtrinity-src/hashtrinity "${CI_PROJECT_DIR}/../fold/hashtrinity"
 
 test:cargo:
   stage: test
