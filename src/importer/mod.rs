@@ -259,11 +259,28 @@ fn parse_lingo_json(path: &Path) -> (Option<String>, Vec<String>, Option<String>
     (None, Vec::new(), None)
 }
 
+/// Inlang has two real, currently-active `project.inlang/settings.json`
+/// schemas in the wild, not one:
+/// - Legacy (`@inlang/plugin-i18next`): `sourceLanguageTag`/`languageTags`.
+///   Verified against `AppFlowy-IO/AppFlowy`.
+/// - Current (`@inlang/plugin-message-format`): `baseLocale`/`locales`.
+///   Verified against two independent real projects, `VERT-sh/VERT` and
+///   `Splode/pomotroid` — both live, active, and using the newer schema.
+/// Before this fix, only the legacy field names were read, so both real
+/// message-format projects silently returned no source/target locales at
+/// all (the file was still detected, since detection only checks the path
+/// exists, but the actual locale data glossa needs was dropped).
 fn parse_inlang_settings(path: &Path) -> (Option<String>, Vec<String>) {
     if let Ok(content) = fs::read_to_string(path) {
         if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content) {
-            let src = v.get("sourceLanguageTag").and_then(|s| s.as_str()).map(|s| s.to_string());
-            let targets = v.get("languageTags")
+            let src = v
+                .get("sourceLanguageTag")
+                .or_else(|| v.get("baseLocale"))
+                .and_then(|s| s.as_str())
+                .map(|s| s.to_string());
+            let targets = v
+                .get("languageTags")
+                .or_else(|| v.get("locales"))
                 .and_then(|a| a.as_array())
                 .map(|arr| {
                     arr.iter()
@@ -466,6 +483,94 @@ mod tests {
         assert_eq!(imports[0].include_patterns, vec!["./src/**/*.ts?(x)"]);
     }
 
+    /// Real fixture: `watt-mind/coach`'s `.tolgeerc` (no `.json` extension) —
+    /// a third distinct real shape with no `patterns` field at all, only
+    /// `push.files`/`pull`. Confirms detection and the absence of a crash
+    /// when `patterns` is missing (include_patterns should just be empty,
+    /// not an error) rather than asserting a bug fix.
+    #[test]
+    fn test_detect_tolgee_real_world_shape_watt_mind_coach_no_patterns() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(
+            root.join(".tolgeerc"),
+            r#"{"projectId": 2, "push": {"files": [{"path": "app/i18n/en", "language": "en", "template": "{namespace}.json"}]}, "pull": {"path": "app/i18n", "fileStructureTemplate": "{languageTag}/{namespace}.json"}}"#,
+        )
+        .unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].system, IncumbentSystem::Tolgee);
+        assert!(imports[0].include_patterns.is_empty(), "no `patterns` field in this real shape — must be empty, not a parse error");
+    }
+
+    /// Real fixture: `liquidinvestigations/hoover-ui`'s `.tolgeerc` — the
+    /// minimal real-world extreme, just `{"projectId": 3827}`.
+    #[test]
+    fn test_detect_tolgee_real_world_shape_minimal_hoover_ui() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(root.join(".tolgeerc"), r#"{"projectId": 3827}"#).unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].system, IncumbentSystem::Tolgee);
+    }
+
+    /// Real fixture: `strawberrymusicplayer/strawberry`'s crowdin.yml — a
+    /// single-file mapping (Qt .ts format), the simplest real shape.
+    #[test]
+    fn test_detect_crowdin_real_world_shape_strawberry_single_file() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(
+            root.join("crowdin.yml"),
+            "files:\n  - source: /src/translations/strawberry_en_US.ts\n    translation: /src/translations/strawberry_%locale_with_underscore%.ts\n",
+        )
+        .unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].include_patterns, vec!["/src/translations/strawberry_en_US.ts"]);
+    }
+
+    /// Real fixture: `microsoft/samples-for-ai`'s crowdin.yml — the most
+    /// structurally complex real shape found: three separate `files:`
+    /// entries (.md/.png/.gif), each with a nested `ignore:` list and a
+    /// `languages_mapping:` object interleaved between `source:` lines.
+    /// Confirms the line-scanner doesn't get confused by the nested `ignore:`
+    /// list items (which also start with `- `) and still extracts all three
+    /// real source patterns correctly.
+    #[test]
+    fn test_detect_crowdin_real_world_shape_samples_for_ai_multi_file_complex() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        let crowdin_yml = r#"files:
+  - source: /**/*.md
+    ignore:
+      - /**/Progressive growing of GANs*.md
+      - /**/ThirdPartyNotice.md
+      - /**/LICENSE.md
+    translation: /%locale_with_underscore%/%original_path%/%original_file_name%
+    languages_mapping:
+      locale_with_underscore:
+        zh-CN: zh-hans
+  - source: /**/*.png
+    translation: /%locale_with_underscore%/%original_path%/%original_file_name%
+  - source: /**/*.gif
+    translation: /%three_letters_code%/%original_path%/%original_file_name%
+"#;
+        fs::write(root.join("crowdin.yml"), crowdin_yml).unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1);
+        assert_eq!(
+            imports[0].include_patterns,
+            vec!["/**/*.md", "/**/*.png", "/**/*.gif"],
+            "must extract all 3 real source patterns despite the nested ignore: list and languages_mapping: block in between"
+        );
+    }
+
     /// Real fixture: verbatim `crowdin.yml` from `DS-Homebrew/TWiLightMenu`
     /// (a real, live Crowdin user). Regression guard for the bug where the
     /// parser only looked for `source_language:`/`languages:` keys that
@@ -538,6 +643,58 @@ files:
         assert_eq!(imports.len(), 1);
         assert_eq!(imports[0].system, IncumbentSystem::Inlang);
         assert_eq!(imports[0].target_locales, vec!["de", "zh-CN"]);
+    }
+
+    /// Real fixture: verbatim `project.inlang/settings.json` from
+    /// `VERT-sh/VERT`, using the current `baseLocale`/`locales` schema
+    /// (`@inlang/plugin-message-format`) rather than AppFlowy's legacy
+    /// `sourceLanguageTag`/`languageTags` (`@inlang/plugin-i18next`).
+    /// Regression guard for the bug where only the legacy field names were
+    /// read, so this real, currently-active project's locale data was
+    /// silently dropped even though the file was correctly detected.
+    #[test]
+    fn test_detect_inlang_real_world_shape_vert_message_format_schema() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        let inlang_dir = root.join("project.inlang");
+        fs::create_dir_all(&inlang_dir).unwrap();
+        let settings = r#"
+        {
+          "$schema": "https://inlang.com/schema/project-settings",
+          "baseLocale": "en",
+          "locales": ["en", "es", "fr", "de", "it", "ba", "hr", "tr", "ja", "ko", "el", "id", "zh-Hans", "zh-Hant", "pt-BR"],
+          "modules": ["https://cdn.jsdelivr.net/npm/@inlang/plugin-message-format@4/dist/index.js"],
+          "plugin.inlang.messageFormat": { "pathPattern": "./messages/{locale}.json" }
+        }
+        "#;
+        fs::write(inlang_dir.join("settings.json"), settings).unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].system, IncumbentSystem::Inlang);
+        assert_eq!(imports[0].source_locale.as_deref(), Some("en"), "must read baseLocale when sourceLanguageTag is absent");
+        assert_eq!(imports[0].target_locales.len(), 14, "15 total locales minus the source itself");
+        assert!(imports[0].target_locales.contains(&"zh-Hans".to_string()));
+    }
+
+    /// Second independent real project on the same current schema —
+    /// `Splode/pomotroid` — confirming this isn't a one-off.
+    #[test]
+    fn test_detect_inlang_real_world_shape_pomotroid_message_format_schema() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        let inlang_dir = root.join("project.inlang");
+        fs::create_dir_all(&inlang_dir).unwrap();
+        fs::write(
+            inlang_dir.join("settings.json"),
+            r#"{"$schema": "https://inlang.com/schema/project-settings", "baseLocale": "en", "locales": ["en", "es", "fr", "de", "ja", "zh", "pt", "tr"], "modules": [], "plugin.inlang.messageFormat": {"pathPattern": "./src/messages/{locale}.json"}}"#,
+        )
+        .unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].source_locale.as_deref(), Some("en"));
+        assert_eq!(imports[0].target_locales.len(), 7);
     }
 
     /// Real fixture: verbatim `project.inlang/settings.json` from
