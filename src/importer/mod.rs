@@ -412,6 +412,43 @@ mod tests {
         assert_eq!(imports[0].format.as_deref(), Some("json"));
     }
 
+    /// Third independent real fixture — `formbricks/formbricks` (12.9k
+    /// stars), confirming the schema generalizes and exercising
+    /// region-tagged locale codes (`zh-Hans-CN`, and two distinct Portuguese
+    /// variants `pt-BR`/`pt-PT`) that the postiz-app fixture didn't cover.
+    /// Real path is `apps/web/i18n.json` in formbricks' monorepo, not the
+    /// repo root — this fixture validates as if glossa were pointed at that
+    /// subpackage directory, which is the realistic invocation for a
+    /// per-package scan; scanning an entire monorepo root for configs nested
+    /// under `apps/*`/`packages/*` is a separate, larger question not
+    /// covered by this fix.
+    #[test]
+    fn test_detect_lingo_dev_i18n_json_real_world_shape_formbricks() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(
+            root.join("i18n.json"),
+            r#"{
+              "$schema": "https://lingo.dev/schema/i18n.json",
+              "buckets": { "json": { "include": ["locales/[locale].json"] } },
+              "locale": {
+                "source": "en-US",
+                "targets": ["de-DE", "es-ES", "fr-FR", "hu-HU", "ja-JP", "nl-NL", "pt-BR", "pt-PT", "ro-RO", "ru-RU", "sv-SE", "tr-TR", "zh-Hans-CN", "zh-Hant-TW"]
+              },
+              "version": 1.8
+            }"#,
+        )
+        .unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].system, IncumbentSystem::LingoDev);
+        assert_eq!(imports[0].source_locale.as_deref(), Some("en-US"), "region-tagged source locale must survive intact");
+        assert_eq!(imports[0].target_locales.len(), 14);
+        assert!(imports[0].target_locales.contains(&"pt-BR".to_string()));
+        assert!(imports[0].target_locales.contains(&"pt-PT".to_string()), "two distinct Portuguese variants must both be kept, not deduped");
+    }
+
     /// `i18n.json` takes priority over legacy `lingo.json` when both exist,
     /// and must not be detected twice.
     #[test]
