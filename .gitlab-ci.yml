@@ -54,7 +54,7 @@ i18n:check:
   before_script:
     - *fetch_hashtrinity_dependency
   script:
-    - cargo run --release -- check --ci --format=text
+    - cargo run --release --bin glossa -- check --ci --format=text
   artifacts:
     when: always
     paths:
