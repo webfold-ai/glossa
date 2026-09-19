@@ -421,6 +421,26 @@ fn parse_jsx_element_node(
                 i = new_idx;
                 continue;
             }
+            // A REAL, always-reproducible infinite loop, found via CI
+            // bisection against gitroomhq/postiz-app: parse_jsx_element_node
+            // can legitimately return None here (e.g. a self-closing tag
+            // whose only attribute is a bare spread `{...x}` — no name, no
+            // `=`, correctly rejected as not-real-JSX-attribute-syntax by
+            // the fix in the attribute loop above). When it does, `i` is
+            // left pointing at the unconsumed `<`. The "Plain text
+            // character" fallback below stops its own loop the instant it
+            // sees a `<` (by design, so real child elements get handled by
+            // the branch above) — so with `i` unmoved and every branch
+            // re-evaluating identically, the outer `while i < chars.len()`
+            // loop above spins forever at the same position. Every real
+            // .tsx file with a self-closing tag using ONLY a spread
+            // attribute, followed by any sibling, hits this. Consume the
+            // `<` as a single literal text character so the loop can
+            // actually make progress.
+            children.push(JsxNode::Text("<".to_string()));
+            i += 1;
+            *col += 1;
+            continue;
         }
 
         // JSX expression child {expr}
@@ -438,6 +458,14 @@ fn parse_jsx_element_node(
                 }
                 continue;
             }
+            // skip_curly returning None means an unbalanced `{` (no matching
+            // `}` before EOF) -- same shape of bug: without an explicit
+            // advance here, the outer loop would spin on this `{` forever
+            // too, for the same reason as the `<` case above.
+            children.push(JsxNode::Text("{".to_string()));
+            i += 1;
+            *col += 1;
+            continue;
         }
 
         // Plain text character
