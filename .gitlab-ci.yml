@@ -40,7 +40,7 @@ stages:
 
 test:cargo:
   stage: test
-  image: rust:1.80-slim
+  image: rust:1.85-slim
   before_script:
     - *fetch_hashtrinity_dependency
   script:
@@ -48,7 +48,7 @@ test:cargo:
 
 i18n:check:
   stage: i18n
-  image: rust:1.80-slim
+  image: rust:1.85-slim
   variables:
     FAIL_ON_MISSING: "true"
   before_script:
