@@ -30,6 +30,21 @@ enum JsxNode {
     },
 }
 
+/// Real JSX tags are never glued directly onto a preceding identifier
+/// character — they're preceded by whitespace, `(`, `{`, `>`, `&&`, `?`,
+/// `:`, a newline, or start-of-file. A `<` immediately after an identifier
+/// character is TypeScript generic syntax (`useState<string>`, `Array<T>`,
+/// `Map<K, V>` — ubiquitous in real .tsx/.ts files) or a bare comparison
+/// (`i<len`, `x<y`), never a real tag. Found by testing against real
+/// production files in gitroomhq/postiz-app: dozens of real .tsx component
+/// files each individually timed out because every generic type parameter
+/// in the file was optimistically parsed as a tag-open, then scanned to EOF
+/// hunting for a closing tag that could never exist — O(file size) wasted
+/// work per generic usage, compounding across every generic in the file.
+fn preceded_by_identifier_char(chars: &[char], lt_idx: usize) -> bool {
+    lt_idx > 0 && (chars[lt_idx - 1].is_alphanumeric() || chars[lt_idx - 1] == '_' || chars[lt_idx - 1] == '$')
+}
+
 /// Checks if a tag is a structural container rather than a single phrase/message.
 fn is_container_tag(tag: &str) -> bool {
     if tag.chars().next().map_or(false, |c| c.is_ascii_uppercase()) {
@@ -88,7 +103,7 @@ pub fn extract_jsx(source: &str, file_path: &str) -> Vec<ExtractedItem> {
             continue;
         }
 
-        if chars[idx] == '<' && idx + 1 < len {
+        if chars[idx] == '<' && idx + 1 < len && !preceded_by_identifier_char(&chars, idx) {
             let next = chars[idx + 1];
             if next.is_ascii_alphabetic() {
                 if let Some((new_idx, node)) = parse_jsx_element_node(&chars, idx, &mut line, &mut col) {
@@ -396,7 +411,11 @@ fn parse_jsx_element_node(
         }
 
         // Child JSX element
-        if chars[i] == '<' && i + 1 < chars.len() && chars[i + 1].is_ascii_alphabetic() {
+        if chars[i] == '<'
+            && i + 1 < chars.len()
+            && chars[i + 1].is_ascii_alphabetic()
+            && !preceded_by_identifier_char(chars, i)
+        {
             if let Some((new_idx, child_node)) = parse_jsx_element_node(chars, i, line, col) {
                 children.push(child_node);
                 i = new_idx;
@@ -565,6 +584,34 @@ mod tests {
             let items = extract_jsx(source, "test.js");
             assert!(items.is_empty(), "source `{source}` must extract nothing, not hang");
         }
+    }
+
+    /// Regression guard for the second, larger real-world hang: TypeScript
+    /// generic type parameters (`useState<string>`, `Array<T>`,
+    /// `Map<K, V>`) are ubiquitous in real .tsx/.ts files. Each one was
+    /// optimistically parsed as a self-closing-ish tag-open, then scanned to
+    /// EOF hunting for a `</string>`/`</T>`/`</K>` closing tag that could
+    /// never exist -- not an infinite loop like the comparison-operator bug,
+    /// but O(file size) wasted work per generic usage. Found via CI
+    /// bisection against gitroomhq/postiz-app: dozens of real .tsx
+    /// component files each individually timed out at 3 seconds.
+    #[test]
+    fn test_regression_typescript_generics_are_not_treated_as_jsx_tags() {
+        let source = r#"
+        import { useState, useRef } from 'react';
+        function Component() {
+            const [name, setName] = useState<string>('');
+            const items = useRef<Array<number>>([]);
+            const cache: Map<string, Record<string, boolean>> = new Map();
+            return <div>{name}</div>;
+        }
+        "#;
+        let items = extract_jsx(source, "Component.tsx");
+        // The only real JSX here is the final `<div>{name}</div>` -- the
+        // generics above it must not be mistaken for tags, and (this is the
+        // actual regression) parsing must complete at all rather than
+        // scanning to EOF for each one.
+        assert!(items.iter().all(|i| i.canonical_text != "string" && i.canonical_text != "number"));
     }
 
     #[test]
