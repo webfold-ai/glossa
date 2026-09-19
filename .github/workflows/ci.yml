@@ -51,8 +51,10 @@ jobs:
             cp "$f" "/tmp/bisect-one/$(basename "$f")"
             cd /tmp/bisect-one
             t0=$(date +%s%N)
+            set +e
             timeout 20 glossa extract > /dev/null 2>&1
             rc=$?
+            set -e
             t1=$(date +%s%N)
             ms=$(( (t1 - t0) / 1000000 ))
             echo "${ms}ms rc=${rc} $f" >> /tmp/timing-results/timings.txt
