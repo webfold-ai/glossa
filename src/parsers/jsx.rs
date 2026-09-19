@@ -309,6 +309,25 @@ fn parse_jsx_element_node(
             i += 1;
         }
 
+        // A real infinite loop, found by testing against a real production
+        // file (gitroomhq/postiz-app's apps/frontend/public/f.js): if the
+        // current character starts neither a valid attr name, `/`, `>`, nor
+        // is whitespace, NOTHING above advances `i` and this `while i <
+        // chars.len()` loop repeats forever at the identical position.
+        // Ordinary JS/TS comparisons with no space — `i<len;i++`, `i<len)`,
+        // `i<len&&...` — all hit this: after the outer `<` + alphabetic-next
+        // check treats `len` as a plausible tag name, the very next
+        // character (`;`, `)`, `&`) is neither an attr-name start nor `=`,
+        // so parsing never terminates. Any `.js`/`.jsx`/`.tsx` file with a
+        // normal loop condition triggers this — this is not a rare edge
+        // case, every real-world non-JSX .js file that reaches here hangs
+        // the whole extraction forever. If nothing here looks like valid
+        // JSX attribute syntax, this was never a real tag — bail out rather
+        // than loop.
+        if attr_name.is_empty() && (i >= chars.len() || chars[i] != '=') {
+            return None;
+        }
+
         skip_ws(chars, &mut i, line, col);
         if i < chars.len() && chars[i] == '=' {
             i += 1;
@@ -505,6 +524,48 @@ fn sanitize_slot_name(expr: &str, fallback_id: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Regression guard for a real infinite loop, found by testing
+    /// extraction against a real production file
+    /// (gitroomhq/postiz-app's apps/frontend/public/f.js, a plain
+    /// Facebook-SDK .js file with zero JSX in it, which hung glossa's own
+    /// CI benchmark job for 10+ minutes before it was manually canceled).
+    /// `.js` files are routed through this JSX extractor unconditionally,
+    /// and any ordinary no-space comparison like `i<len` is enough:
+    /// `<len` looks like a plausible tag start, then the very next
+    /// character (here `;`) matched neither a valid attribute name nor `=`,
+    /// so nothing advanced `i` and the attribute-parsing loop spun forever.
+    /// This test would hang the entire test suite before the fix — its
+    /// mere ability to complete is the assertion.
+    #[test]
+    fn test_regression_no_space_comparison_does_not_infinite_loop() {
+        let source = r#"
+        function findIndex(arr, target) {
+            for (var i = 0, len = arr.length; i<len; i++) {
+                if (arr[i]===target) return i;
+            }
+            return -1;
+        }
+        "#;
+        let items = extract_jsx(source, "f.js");
+        // No real JSX exists in this file; a correct parser extracts nothing
+        // (and, most importantly, returns at all).
+        assert!(items.is_empty());
+    }
+
+    /// Same bug family, different trigger characters commonly found in real
+    /// minified/compact JS: `)`, `&&`, `+`.
+    #[test]
+    fn test_regression_no_space_comparison_variants_do_not_infinite_loop() {
+        for source in [
+            "if(x<y){doThing();}",
+            "while(count<total&&!done){count++;}",
+            "const z=a<b+1?a:b;",
+        ] {
+            let items = extract_jsx(source, "test.js");
+            assert!(items.is_empty(), "source `{source}` must extract nothing, not hang");
+        }
+    }
 
     #[test]
     fn test_extract_jsx_basic() {
