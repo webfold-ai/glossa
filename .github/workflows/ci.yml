@@ -16,18 +16,18 @@ jobs:
       # hashtrinity pulls in via a relative path dependency (../fold/hashtrinity)
       # that assumes a sibling checkout; the extracted repo is itself a
       # workspace whose real package lives one level deeper
-      # (hashtrinity/hashtrinity/), and it in turn depends on other private
-      # gitlab.tas.twn.network repos (e.g. lucas/apeiron) via cargo git
-      # dependencies that Cargo fetches directly during resolution. Wire
-      # GITLAB_TOKEN into git's own credential resolution for the whole host
-      # so both the manual clone and Cargo's internal fetches authenticate.
-      - name: Fetch private GitLab dependencies
+      # (hashtrinity/hashtrinity/). GitHub's Ptyktos/hashtrinity and GitLab's
+      # twn/ptyktos/hashtrinity have DIVERGED: GitLab's declares an
+      # `apeiron = { git = "https://gitlab.tas.twn.network/lucas/apeiron.git" }`
+      # dependency that GitHub's copy doesn't have at all (confirmed by
+      # reading both Cargo.toml files directly) -- and gitlab.tas.twn.network
+      # is an internal/VPN-only host public GitHub runners can't route to at
+      # all (TLS handshake fails, not an auth failure). Using GitHub's
+      # hashtrinity avoids needing that private network entirely.
+      - name: Fetch hashtrinity dependency (from GitHub, not GitLab)
         run: |
-          git config --global "url.https://oauth2:${GITLAB_TOKEN}@gitlab.tas.twn.network/.insteadOf" "https://gitlab.tas.twn.network/"
           rm -rf "${GITHUB_WORKSPACE}/../fold"
-          git clone --depth 1 "https://oauth2:${GITLAB_TOKEN}@gitlab.tas.twn.network/twn/ptyktos/hashtrinity.git" "${GITHUB_WORKSPACE}/../fold"
-        env:
-          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          git clone --depth 1 "https://github.com/Ptyktos/hashtrinity.git" "${GITHUB_WORKSPACE}/../fold"
 
       - name: cargo test
         run: cargo test --verbose
