@@ -23,12 +23,20 @@ stages:
 # time) — only the glossa project's own checkout gets refreshed per job, so
 # anything written to a sibling path by an earlier attempt survives. `rm -rf`
 # the target first so this step is idempotent regardless of prior state.
+#
+# The nested package (hashtrinity/hashtrinity/Cargo.toml) uses
+# `edition.workspace = true` / `license.workspace = true`, inherited from the
+# repo-root workspace manifest's `[workspace.package]` — so it cannot be
+# copied out in isolation (Cargo needs to walk up and find that workspace
+# root). Keep the full clone intact and symlink the exact path glossa's
+# Cargo.toml expects to point *into* it, rather than extracting the
+# subdirectory.
 .fetch_hashtrinity_dependency: &fetch_hashtrinity_dependency
   - apt-get update -qq && apt-get install -y -qq git ca-certificates
-  - rm -rf /tmp/hashtrinity-src "${CI_PROJECT_DIR}/../fold/hashtrinity"
-  - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/twn/ptyktos/hashtrinity.git" /tmp/hashtrinity-src
+  - rm -rf "${CI_PROJECT_DIR}/../fold/hashtrinity-repo" "${CI_PROJECT_DIR}/../fold/hashtrinity"
   - mkdir -p "${CI_PROJECT_DIR}/../fold"
-  - cp -r /tmp/hashtrinity-src/hashtrinity "${CI_PROJECT_DIR}/../fold/hashtrinity"
+  - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/twn/ptyktos/hashtrinity.git" "${CI_PROJECT_DIR}/../fold/hashtrinity-repo"
+  - ln -s hashtrinity-repo/hashtrinity "${CI_PROJECT_DIR}/../fold/hashtrinity"
 
 test:cargo:
   stage: test
