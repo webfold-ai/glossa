@@ -1056,6 +1056,29 @@ function C(props: any) {
         );
     }
 
+    /// Both pairs involving <textarea> hang; the pair without it (case 12)
+    /// passed. Isolating to the absolute minimum: a self-closing tag whose
+    /// ONLY attribute is a bare spread `{...x}` (no name, no `=`),
+    /// immediately followed by a sibling.
+    #[test]
+    fn test_bisect_case_13_minimal_spread_only_self_closing_plus_sibling() {
+        extract_jsx_bounded(
+            r#"function C() { return <div><textarea {...props} /><span>x</span></div>; }"#,
+            "minimal_spread_only_self_closing_plus_sibling",
+        );
+    }
+
+    /// Same minimal shape, but the self-closing tag has a real named
+    /// attribute before the spread (matching the real file's actual
+    /// ordering: className={...} appears before the final {...rest}).
+    #[test]
+    fn test_bisect_case_14_named_attr_then_spread_self_closing_plus_sibling() {
+        extract_jsx_bounded(
+            r#"function C() { return <div><textarea className="a" {...props} /><span>x</span></div>; }"#,
+            "named_attr_then_spread_self_closing_plus_sibling",
+        );
+    }
+
     #[test]
     fn test_extract_jsx_basic() {
         let jsx = r#"
