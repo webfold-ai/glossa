@@ -34,8 +34,15 @@ stages:
 # root, not the symlink target's real parent. So clone the hashtrinity repo
 # AS ../fold itself: ../fold/hashtrinity/ becomes a real (non-symlinked)
 # subdirectory whose true parent (../fold/) holds the real workspace root.
+#
+# hashtrinity itself depends on other private gitlab.tas.twn.network repos
+# via cargo git dependencies (e.g. lucas/apeiron) that Cargo fetches
+# directly during dependency resolution -- not via the manual git clone
+# above, so CI_JOB_TOKEN must also be wired into git's own credential
+# resolution for the whole host, not just the one hashtrinity clone.
 .fetch_hashtrinity_dependency: &fetch_hashtrinity_dependency
   - apt-get update -qq && apt-get install -y -qq git ca-certificates
+  - git config --global "url.https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/.insteadOf" "https://${CI_SERVER_HOST}/"
   - rm -rf "${CI_PROJECT_DIR}/../fold"
   - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/twn/ptyktos/hashtrinity.git" "${CI_PROJECT_DIR}/../fold"
 
