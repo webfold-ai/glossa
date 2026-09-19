@@ -2,6 +2,7 @@
 stages:
   - test
   - i18n
+  - bisect
   - benchmark
 
 # Cargo.toml pulls hashtrinity via a relative path dependency
@@ -79,8 +80,13 @@ i18n:check:
 # work — that requires a paid account/API token for each of them — only the
 # local, filesystem-side operations (init/extract/check) that are directly
 # comparable.
+# Runs alone in its own stage (not concurrently with benchmark:real-repos)
+# to rule out CI resource contention as an explanation, and measures actual
+# per-file wall-clock time with nanosecond precision instead of a pass/fail
+# timeout -- a boolean threshold can't distinguish "genuinely pathological"
+# from "briefly contended", a precise sorted timing list can.
 benchmark:bisect-postiz-hang:
-  stage: benchmark
+  stage: bisect
   image: rust:latest
   before_script:
     - *fetch_hashtrinity_dependency
@@ -95,17 +101,29 @@ benchmark:bisect-postiz-hang:
         rm -rf /tmp/bisect-one && mkdir -p /tmp/bisect-one
         cp "$f" "/tmp/bisect-one/$(basename "$f")"
         cd /tmp/bisect-one
-        if ! timeout 3 glossa extract > /dev/null 2>&1; then
-          echo "HANG_OR_SLOW: $f" >> /tmp/bisect-results/hits.txt
-        fi
+        t0=$(date +%s%N)
+        timeout 20 glossa extract > /dev/null 2>&1
+        rc=$?
+        t1=$(date +%s%N)
+        ms=$(( (t1 - t0) / 1000000 ))
+        echo "${ms}ms rc=${rc} $f" >> /tmp/bisect-results/timings.txt
         cd /tmp/postiz
       done
-    - cp /tmp/bisect-results/hits.txt ./bisect-hits.txt || echo "no hits found" > ./bisect-hits.txt
-    - cat ./bisect-hits.txt
+    - sort -rn /tmp/bisect-results/timings.txt > ./bisect-timings-sorted.txt
+    - echo "=== slowest 30 files (ms, exit code, path) ==="
+    - head -30 ./bisect-timings-sorted.txt
+    - echo "=== summary stats ==="
+    - awk '{print $1+0}' /tmp/bisect-results/timings.txt | sed 's/ms//' > /tmp/ms-only.txt
+    - python3 -c "
+      import sys
+      vals = sorted(int(l.strip()) for l in open('/tmp/ms-only.txt') if l.strip())
+      n = len(vals)
+      print(f'count={n} min={vals[0]}ms max={vals[-1]}ms mean={sum(vals)/n:.1f}ms p50={vals[n//2]}ms p90={vals[int(n*0.9)]}ms p99={vals[int(n*0.99)]}ms')
+      "
   artifacts:
     when: always
     paths:
-      - bisect-hits.txt
+      - bisect-timings-sorted.txt
   allow_failure: true
 
 benchmark:real-repos:
