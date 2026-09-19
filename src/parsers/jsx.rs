@@ -1185,6 +1185,58 @@ function f() {
     }
 
     #[test]
+    fn test_bisect_case_17_fragment_style_template_then_spread_sibling() {
+        extract_jsx_bounded(
+            r#"
+function f() {
+  return (
+    <>
+      <style>
+        {`#support-discord {display: none !important;}`}
+      </style>
+      <ManageModal {...props} />
+    </>
+  );
+}
+"#,
+            "fragment_style_template_then_spread_sibling",
+        );
+    }
+
+    #[test]
+    fn test_bisect_case_18_style_template_only_no_fragment() {
+        extract_jsx_bounded(
+            r#"
+function f() {
+  return (
+    <style>
+      {`#support-discord {display: none !important;}`}
+    </style>
+  );
+}
+"#,
+            "style_template_only_no_fragment",
+        );
+    }
+
+    #[test]
+    fn test_bisect_case_19_fragment_with_two_plain_siblings() {
+        extract_jsx_bounded(
+            r#"
+function f() {
+  return (
+    <>
+      <div>a</div>
+      <span>b</span>
+    </>
+  );
+}
+"#,
+            "fragment_with_two_plain_siblings",
+        );
+    }
+
+    #[test]
     fn test_extract_jsx_basic() {
         let jsx = r#"
         export default function Welcome({ name, count }) {
