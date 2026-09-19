@@ -481,6 +481,27 @@ fn parse_jsx_element_node(
             i += 1;
         }
 
+        // A REAL, always-reproducible infinite loop, found via CI bisection
+        // against gitroomhq/postiz-app's add.edit.modal.tsx: `chars[i] ==
+        // '<'` can reach this point without matching either branch above --
+        // the closing-tag check requires a `/`, the child-element check
+        // requires the next char to be alphabetic. A bare fragment open
+        // `<>` (next char `>`), or `<` glued to any other non-letter,
+        // non-`/` character, matches neither. The text loop above then
+        // consumes zero characters (its own exclusion condition stops it
+        // instantly on `<`), leaving `i` completely unmoved -- every branch
+        // in the loop re-evaluates identically forever. (In the real file
+        // this fragment was reached only because an earlier unrelated false
+        // match had mis-nested tags, but the same gap would hang on any
+        // literal `<>` appearing as a child.) Consume it as a single
+        // literal text character so the loop always makes progress.
+        if text.is_empty() && i < chars.len() && chars[i] == '<' {
+            *col += 1;
+            children.push(JsxNode::Text("<".to_string()));
+            i += 1;
+            continue;
+        }
+
         let norm = normalize_whitespace(&text);
         if !norm.trim().is_empty() {
             children.push(JsxNode::Text(norm));
@@ -1318,6 +1339,33 @@ export const AddEditModalInnerInner = (props: any) => {
 };
 "#,
             "use_effect_body_then_fragment_return",
+        );
+    }
+
+    #[test]
+    fn test_regression_bare_fragment_inside_children_loop_does_not_hang() {
+        // Minimal reproduction of the add.edit.modal.tsx hang: a
+        // `.indexOf('<p>')` string literal opens a fake `<p>` tag at the
+        // top level; its children-loop then recurses into the template
+        // literal's `<p>${line}</p>` as a nested child, consuming the only
+        // real `</p>` to close the INNER one -- leaving the outer fake
+        // `<p>` unclosed. Its children-loop then scans forward through
+        // everything else until it reaches the real `<>` fragment, which
+        // previously hung forever (see the fix in the "Plain text
+        // character" section of parse_jsx_element_node).
+        extract_jsx_bounded(
+            r#"
+function f() {
+  const x = post.content.indexOf('<p>') > -1;
+  const y = `<p>${line}</p>`;
+  return (
+    <>
+      <ManageModal {...props} />
+    </>
+  );
+}
+"#,
+            "bare_fragment_inside_children_loop",
         );
     }
 
