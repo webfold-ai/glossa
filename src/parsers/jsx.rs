@@ -614,6 +614,93 @@ mod tests {
         assert!(items.iter().all(|i| i.canonical_text != "string" && i.canonical_text != "number"));
     }
 
+    /// Diagnostic regression test: verbatim content of
+    /// `gitroomhq/postiz-app`'s `libraries/react-shared-libraries/src/form/textarea.tsx`,
+    /// which still hits a 20-second timeout when run through the real CLI
+    /// (`glossa extract`) in a completely isolated GitHub Actions run — no
+    /// CI contention possible, so this is a genuine remaining hang, not
+    /// noise. Runs extract_jsx on a background thread with a 5-second
+    /// bound: if the JSX parser itself is the culprit, this test fails fast
+    /// with a clear message instead of hanging cargo test indefinitely. If
+    /// this test PASSES quickly, the bug is elsewhere in the CLI path
+    /// (config loading, lockfile I/O, directory walking) — not the parser.
+    #[test]
+    fn test_regression_textarea_real_world_file_does_not_hang() {
+        let source = r#"
+'use client';
+
+import { DetailedHTMLProps, FC, InputHTMLAttributes, useMemo } from 'react';
+import clsx from 'clsx';
+import { useFormContext } from 'react-hook-form';
+import { TranslatedLabel } from '../translation/translated-label';
+
+export const Textarea: FC<
+  DetailedHTMLProps<
+    InputHTMLAttributes<HTMLTextAreaElement>,
+    HTMLTextAreaElement
+  > & {
+    error?: any;
+    disableForm?: boolean;
+    label: string;
+    name: string;
+    translationKey?: string;
+    translationParams?: Record<string, string | number>;
+  }
+> = (props) => {
+  const {
+    label,
+    className,
+    disableForm,
+    error,
+    translationKey,
+    translationParams,
+    ...rest
+  } = props;
+  const form = useFormContext();
+  const err = useMemo(() => {
+    if (error) return error;
+    if (!form || !form.formState.errors[props?.name!]) return;
+    return form?.formState?.errors?.[props?.name!]?.message! as string;
+  }, [form?.formState?.errors?.[props?.name!]?.message, error]);
+  return (
+    <div
+      className={clsx(
+        'flex flex-col gap-[6px]',
+        props.disabled && 'opacity-50'
+      )}
+    >
+      <div className={`text-[14px]`}>
+        <TranslatedLabel
+          label={label}
+          translationKey={translationKey}
+          translationParams={translationParams}
+        />
+      </div>
+      <textarea
+        {...(disableForm ? {} : form.register(props.name))}
+        className={clsx(
+          'bg-input min-h-[150px] p-[16px] outline-none border-fifth border rounded-[4px] text-inputText placeholder-inputText',
+          className
+        )}
+        {...rest}
+      />
+      <div className="text-red-400 text-[12px]">{err || <>&nbsp;</>}</div>
+    </div>
+  );
+};
+"#;
+        let (tx, rx) = std::sync::mpsc::channel();
+        let src = source.to_string();
+        std::thread::spawn(move || {
+            let items = extract_jsx(&src, "textarea.tsx");
+            let _ = tx.send(items.len());
+        });
+        match rx.recv_timeout(std::time::Duration::from_secs(5)) {
+            Ok(_) => {}
+            Err(_) => panic!("extract_jsx hung for >5s on textarea.tsx — the bug is in the JSX parser itself"),
+        }
+    }
+
     #[test]
     fn test_extract_jsx_basic() {
         let jsx = r#"
