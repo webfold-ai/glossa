@@ -1107,6 +1107,83 @@ function C(props: any) {
         );
     }
 
+    /// Two files still hit the full 20s timeout after the children-loop
+    /// fix (down from ~30): gitroomhq/postiz-app's add.edit.modal.tsx and
+    /// [p]/page.tsx. add.edit.modal.tsx has template literals containing
+    /// `<p>${line}</p>` inside a .map() callback -- a string, not real JSX
+    /// -- which the naive scanner has no way to distinguish from a real
+    /// tag. Testing the full file and an isolated slice of just that
+    /// pattern to see which specifically hangs.
+    #[test]
+    fn test_bisect_case_15_full_add_edit_modal_file() {
+        extract_jsx_bounded(
+            r#"
+export const AddEditModalInnerInner = (props: any) => {
+  useEffect(() => {
+    if (existingData.integration) {
+      addInternalValue(
+        0,
+        existingData.integration,
+        existingData.posts.map((post) => ({
+          delay: post.delay,
+          content:
+            post.content.indexOf('<p>') > -1
+              ? post.content
+              : post.content
+                  .split('\n')
+                  .map((line: string) => `<p>${line}</p>`)
+                  .join(''),
+          id: post.id,
+          media: post.image as any[],
+        }))
+      );
+    }
+    addGlobalValue(
+      0,
+      props.onlyValues?.length
+        ? props.onlyValues.map((p) => ({
+            content:
+              p.content.indexOf('<p>') > -1
+                ? p.content
+                : p.content
+                    .split('\n')
+                    .map((line: string) => `<p>${line}</p>`)
+                    .join(''),
+            id: makeId(10),
+            media: p.image || [],
+          }))
+        : []
+    );
+  }, []);
+  return (
+    <>
+      <style>
+        {`#support-discord {display: none !important;}`}
+      </style>
+      <ManageModal {...props} />
+    </>
+  );
+};
+"#,
+            "full_add_edit_modal_file",
+        );
+    }
+
+    #[test]
+    fn test_bisect_case_16_template_literal_with_jsx_like_tags_only() {
+        extract_jsx_bounded(
+            r#"
+function f() {
+  return post.content
+    .split('\n')
+    .map((line: string) => `<p>${line}</p>`)
+    .join('');
+}
+"#,
+            "template_literal_with_jsx_like_tags_only",
+        );
+    }
+
     #[test]
     fn test_extract_jsx_basic() {
         let jsx = r#"
