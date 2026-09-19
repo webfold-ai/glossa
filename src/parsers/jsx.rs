@@ -1237,6 +1237,91 @@ function f() {
     }
 
     #[test]
+    fn test_bisect_case_20_full_use_effect_body_trivial_return() {
+        extract_jsx_bounded(
+            r#"
+export const AddEditModalInnerInner = (props: any) => {
+  useEffect(() => {
+    if (existingData.integration) {
+      addInternalValue(
+        0,
+        existingData.integration,
+        existingData.posts.map((post) => ({
+          delay: post.delay,
+          content:
+            post.content.indexOf('<p>') > -1
+              ? post.content
+              : post.content
+                  .split('\n')
+                  .map((line: string) => `<p>${line}</p>`)
+                  .join(''),
+          id: post.id,
+          media: post.image as any[],
+        }))
+      );
+    }
+    addGlobalValue(
+      0,
+      props.onlyValues?.length
+        ? props.onlyValues.map((p) => ({
+            content:
+              p.content.indexOf('<p>') > -1
+                ? p.content
+                : p.content
+                    .split('\n')
+                    .map((line: string) => `<p>${line}</p>`)
+                    .join(''),
+            id: makeId(10),
+            media: p.image || [],
+          }))
+        : []
+    );
+  }, []);
+  return null;
+};
+"#,
+            "full_use_effect_body_trivial_return",
+        );
+    }
+
+    #[test]
+    fn test_bisect_case_21_use_effect_body_then_fragment_return() {
+        extract_jsx_bounded(
+            r#"
+export const AddEditModalInnerInner = (props: any) => {
+  useEffect(() => {
+    addGlobalValue(
+      0,
+      props.onlyValues?.length
+        ? props.onlyValues.map((p) => ({
+            content:
+              p.content.indexOf('<p>') > -1
+                ? p.content
+                : p.content
+                    .split('\n')
+                    .map((line: string) => `<p>${line}</p>`)
+                    .join(''),
+            id: makeId(10),
+            media: p.image || [],
+          }))
+        : []
+    );
+  }, []);
+  return (
+    <>
+      <style>
+        {`#support-discord {display: none !important;}`}
+      </style>
+      <ManageModal {...props} />
+    </>
+  );
+};
+"#,
+            "use_effect_body_then_fragment_return",
+        );
+    }
+
+    #[test]
     fn test_extract_jsx_basic() {
         let jsx = r#"
         export default function Welcome({ name, count }) {
