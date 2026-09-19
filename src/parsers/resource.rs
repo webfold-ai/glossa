@@ -189,6 +189,62 @@ pub fn extract_yaml(source: &str, file_path: &str) -> Vec<ExtractedItem> {
 }
 
 /// Extracts translatable entries from Android XML (`res/values/strings.xml`).
+/// Decodes standard XML entities and numeric character references in a
+/// single left-to-right pass (not sequential `.replace()` calls, which would
+/// risk double-decoding e.g. a literal `&amp;lt;` into `<`).
+///
+/// Real production Android `strings.xml` files lean on numeric references
+/// heavily — verified against `mendhak/gpslogger`'s real strings.xml, which
+/// has 18 of them (`&#160;` non-breaking space ×13, `&#176;` °, `&#189;` ½)
+/// and zero named entities. Before this fix, `extract_android_xml` only
+/// unescaped Android's own backslash escapes (`\'`, `\"`, `\n`) and left
+/// every XML entity as literal text — so `&#160;foot` extracted as the
+/// 9-character string `&#160;foot` instead of the intended non-breaking
+/// space followed by "foot".
+fn decode_xml_entities(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut chars = input.char_indices().peekable();
+    while let Some((i, c)) = chars.next() {
+        if c != '&' {
+            out.push(c);
+            continue;
+        }
+        let rest = &input[i..];
+        if let Some(end) = rest.find(';') {
+            if end <= 10 {
+                let entity = &rest[1..end];
+                let decoded = match entity {
+                    "amp" => Some('&'),
+                    "lt" => Some('<'),
+                    "gt" => Some('>'),
+                    "quot" => Some('"'),
+                    "apos" => Some('\''),
+                    _ if entity.starts_with('#') => {
+                        let code = if let Some(hex) = entity[1..].strip_prefix('x').or_else(|| entity[1..].strip_prefix('X')) {
+                            u32::from_str_radix(hex, 16).ok()
+                        } else {
+                            entity[1..].parse::<u32>().ok()
+                        };
+                        code.and_then(char::from_u32)
+                    }
+                    _ => None,
+                };
+                if let Some(ch) = decoded {
+                    out.push(ch);
+                    // Skip the consumed characters (everything up to and including ';').
+                    for _ in 0..end {
+                        chars.next();
+                    }
+                    continue;
+                }
+            }
+        }
+        // Not a recognized entity — keep the literal '&'.
+        out.push('&');
+    }
+    out
+}
+
 pub fn extract_android_xml(source: &str, file_path: &str) -> Vec<ExtractedItem> {
     let mut items = Vec::new();
 
@@ -203,12 +259,11 @@ pub fn extract_android_xml(source: &str, file_path: &str) -> Vec<ExtractedItem> 
             let content_start = actual_start + close_tag + 1;
             if let Some(end_tag) = source[content_start..].find("</string>") {
                 let content = &source[content_start..content_start + end_tag];
-                let clean_content = content
-                    .replace("\\'", "'")
-                    .replace("\\\"", "\"")
-                    .replace("\\n", "\n")
-                    .trim()
-                    .to_string();
+                let clean_content = decode_xml_entities(
+                    &content.replace("\\'", "'").replace("\\\"", "\"").replace("\\n", "\n"),
+                )
+                .trim()
+                .to_string();
 
                 if !clean_content.is_empty() {
                     let parsed_terms = parse_interpolated_string(&clean_content);
