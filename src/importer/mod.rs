@@ -1,7 +1,7 @@
 //! Universal i18n Importer & Drop-in Migration Engine.
 //!
 //! Automatically imports existing configurations and catalogs from:
-//! - Lingo.dev (`lingo.json`, `lingo.lock`)
+//! - Lingo.dev (`i18n.json`/`i18n.lock` — current naming; `lingo.json`/`lingo.lock` — legacy)
 //! - Inlang / Paraglide (`project.inlang/settings.json`)
 //! - Tolgee (`tolgee.json`, `.tolgee`)
 //! - Crowdin (`crowdin.yml`, `crowdin.yaml`)
@@ -48,9 +48,24 @@ pub struct DetectedImport {
 pub fn detect_incumbent_systems(root: &Path) -> Vec<DetectedImport> {
     let mut detected = Vec::new();
 
-    // 1. Check Lingo.dev
+    // 1. Check Lingo.dev — current real config is `i18n.json` (nested
+    // `locale: {source, targets}` + `buckets: {<fmt>: {include}}` schema);
+    // `lingo.json` is the legacy flat-field name kept for older projects.
+    // Check `i18n.json` first so it isn't swallowed by the generic i18next
+    // fallback further down, which used to mislabel it and discard the
+    // real locale/target data sitting in the file.
+    let i18n_json = root.join("i18n.json");
     let lingo_json = root.join("lingo.json");
-    if lingo_json.exists() {
+    if i18n_json.exists() {
+        let (src, targets, fmt) = parse_lingo_dev_i18n_json(&i18n_json);
+        detected.push(DetectedImport {
+            system: IncumbentSystem::LingoDev,
+            config_file: i18n_json,
+            source_locale: src,
+            target_locales: targets,
+            format: fmt,
+        });
+    } else if lingo_json.exists() {
         let (src, targets, fmt) = parse_lingo_json(&lingo_json);
         detected.push(DetectedImport {
             system: IncumbentSystem::LingoDev,
@@ -120,8 +135,10 @@ pub fn detect_incumbent_systems(root: &Path) -> Vec<DetectedImport> {
         }
     }
 
-    // 6. Check i18next
-    for name in &["i18next-parser.config.js", "next-i18next.config.js", "i18n.json"] {
+    // 6. Check i18next. `i18n.json` is deliberately excluded here — it's
+    // Lingo.dev's real config filename, handled in branch 1 above, and
+    // must not fall through to this generic bucket a second time.
+    for name in &["i18next-parser.config.js", "next-i18next.config.js"] {
         let p = root.join(name);
         if p.exists() {
             detected.push(DetectedImport {
@@ -153,6 +170,36 @@ pub fn import_to_glossa_config(import: &DetectedImport, base_config: &mut LingoC
     if let Some(fmt) = &import.format {
         base_config.output_format = fmt.clone();
     }
+}
+
+/// Parses Lingo.dev's real, current `i18n.json` schema:
+/// `{ "locale": { "source": "en", "targets": [...] }, "buckets": { "<fmt>": { "include": [...] } } }`.
+/// This is NOT the same shape as the legacy flat `sourceLocale`/`targetLocales`
+/// fields `parse_lingo_json` below reads — Lingo.dev nests locale info under
+/// `locale`, and the format is inferred from whichever key `buckets` uses
+/// (real-world example, from `gitroomhq/postiz-app`'s `i18n.json`: `buckets.json`).
+fn parse_lingo_dev_i18n_json(path: &Path) -> (Option<String>, Vec<String>, Option<String>) {
+    if let Ok(content) = fs::read_to_string(path) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content) {
+            let locale = v.get("locale");
+            let src = locale
+                .and_then(|l| l.get("source"))
+                .and_then(|s| s.as_str())
+                .map(|s| s.to_string());
+            let targets = locale
+                .and_then(|l| l.get("targets"))
+                .and_then(|a| a.as_array())
+                .map(|arr| arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+                .unwrap_or_default();
+            let fmt = v
+                .get("buckets")
+                .and_then(|b| b.as_object())
+                .and_then(|m| m.keys().next())
+                .map(|k| k.to_string());
+            return (src, targets, fmt);
+        }
+    }
+    (None, Vec::new(), None)
 }
 
 fn parse_lingo_json(path: &Path) -> (Option<String>, Vec<String>, Option<String>) {
@@ -233,6 +280,69 @@ mod tests {
         assert_eq!(imports[0].system, IncumbentSystem::LingoDev);
         assert_eq!(imports[0].source_locale.as_deref(), Some("en"));
         assert_eq!(imports[0].target_locales, vec!["es", "fr", "ja"]);
+    }
+
+    /// Real fixture: verbatim `i18n.json` content pulled from
+    /// `gitroomhq/postiz-app` (a live, 36k-star Lingo.dev user) on 2026-09-19.
+    /// Regression guard for the bug where glossa only recognized the legacy
+    /// flat `lingo.json` shape and silently mis-detected real Lingo.dev
+    /// projects as generic "i18next" with a hardcoded empty target list.
+    #[test]
+    fn test_detect_lingo_dev_i18n_json_real_world_shape() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        let i18n_json = r#"
+        {
+          "version": 1.8,
+          "provider": {
+            "id": "openai",
+            "model": "gpt-4.1",
+            "prompt": "Translate accurately from {source} to {target}, maintaining the original meaning.",
+            "baseUrl": "https://api.openai.com/v1"
+          },
+          "locale": {
+            "source": "en",
+            "targets": ["he", "ru", "zh", "fr", "bn", "es", "pt", "de", "it", "ja", "ko", "ar", "tr", "vi"]
+          },
+          "buckets": {
+            "json": {
+              "include": ["libraries/react-shared-libraries/src/translation/locales/[locale]/translation.json"]
+            }
+          },
+          "$schema": "https://lingo.dev/schema/i18n.json"
+        }
+        "#;
+        fs::write(root.join("i18n.json"), i18n_json).unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1, "must detect exactly one system, not double-count via the i18next fallback");
+        assert_eq!(imports[0].system, IncumbentSystem::LingoDev, "real i18n.json must classify as LingoDev, not I18next");
+        assert_eq!(imports[0].source_locale.as_deref(), Some("en"));
+        assert_eq!(imports[0].target_locales.len(), 14, "must read the real 14-locale target list, not default to empty");
+        assert!(imports[0].target_locales.contains(&"ja".to_string()));
+        assert_eq!(imports[0].format.as_deref(), Some("json"));
+    }
+
+    /// `i18n.json` takes priority over legacy `lingo.json` when both exist,
+    /// and must not be detected twice.
+    #[test]
+    fn test_i18n_json_takes_priority_over_legacy_lingo_json() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(
+            root.join("i18n.json"),
+            r#"{"locale": {"source": "en", "targets": ["es"]}, "buckets": {"json": {"include": []}}}"#,
+        )
+        .unwrap();
+        fs::write(
+            root.join("lingo.json"),
+            r#"{"sourceLocale": "en", "targetLocales": ["de", "fr"], "format": "json"}"#,
+        )
+        .unwrap();
+
+        let imports = detect_incumbent_systems(root);
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].target_locales, vec!["es"]);
     }
 
     #[test]

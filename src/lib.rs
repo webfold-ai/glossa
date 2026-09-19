@@ -31,7 +31,17 @@ pub mod visual;
 
 pub use config::{GlossaConfig, LingoConfig};
 pub use emitters::{emit_trans_call, TargetFramework};
-pub use engine::{gate::ApeironNullGate, gate::IntegrityGate, TranslationEngine, TranslationProvider};
-pub use ir::{ApeironCatalog, ApeironCoord, ApeironTerm, CanonicalTerm, ContentCoord, ExtractedItem};
+pub use engine::{
+    gate::ApeironNullGate,
+    gate::IntegrityGate,
+    locale_map::{
+        dominant_locale, locale_map, parts_needing_lang_attr, primary_locale, LocaleRegion,
+        LocaleStatus,
+    },
+    TranslationEngine, TranslationProvider,
+};
+pub use ir::{
+    ApeironCatalog, ApeironCoord, ApeironTerm, CanonicalTerm, ContentCoord, ExtractedItem,
+};
 pub use lockfile::LingoLock;
 pub use parsers::{universal_lift, SourceFormat};
