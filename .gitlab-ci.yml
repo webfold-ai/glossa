@@ -26,17 +26,17 @@ stages:
 #
 # The nested package (hashtrinity/hashtrinity/Cargo.toml) uses
 # `edition.workspace = true` / `license.workspace = true`, inherited from the
-# repo-root workspace manifest's `[workspace.package]` — so it cannot be
-# copied out in isolation (Cargo needs to walk up and find that workspace
-# root). Keep the full clone intact and symlink the exact path glossa's
-# Cargo.toml expects to point *into* it, rather than extracting the
-# subdirectory.
+# repo-root workspace manifest's `[workspace.package]`. Cargo's upward
+# workspace-root search walks the literal given path's real ancestors — a
+# symlink at ../fold/hashtrinity pointing elsewhere does NOT work, because
+# Cargo then looks at the symlink's own parent (../fold/) for the workspace
+# root, not the symlink target's real parent. So clone the hashtrinity repo
+# AS ../fold itself: ../fold/hashtrinity/ becomes a real (non-symlinked)
+# subdirectory whose true parent (../fold/) holds the real workspace root.
 .fetch_hashtrinity_dependency: &fetch_hashtrinity_dependency
   - apt-get update -qq && apt-get install -y -qq git ca-certificates
-  - rm -rf "${CI_PROJECT_DIR}/../fold/hashtrinity-repo" "${CI_PROJECT_DIR}/../fold/hashtrinity"
-  - mkdir -p "${CI_PROJECT_DIR}/../fold"
-  - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/twn/ptyktos/hashtrinity.git" "${CI_PROJECT_DIR}/../fold/hashtrinity-repo"
-  - ln -s hashtrinity-repo/hashtrinity "${CI_PROJECT_DIR}/../fold/hashtrinity"
+  - rm -rf "${CI_PROJECT_DIR}/../fold"
+  - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/twn/ptyktos/hashtrinity.git" "${CI_PROJECT_DIR}/../fold"
 
 test:cargo:
   stage: test
