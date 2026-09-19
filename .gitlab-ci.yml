@@ -79,6 +79,35 @@ i18n:check:
 # work — that requires a paid account/API token for each of them — only the
 # local, filesystem-side operations (init/extract/check) that are directly
 # comparable.
+benchmark:bisect-postiz-hang:
+  stage: benchmark
+  image: rust:latest
+  before_script:
+    - *fetch_hashtrinity_dependency
+  script:
+    - cargo build --release --bin glossa
+    - cp target/release/glossa /usr/local/bin/glossa
+    - rm -rf /tmp/postiz && git clone --depth 1 https://github.com/gitroomhq/postiz-app.git /tmp/postiz
+    - mkdir -p /tmp/bisect-results
+    - |
+      cd /tmp/postiz
+      find . -type f \( -name '*.js' -o -name '*.jsx' -o -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' -o -name '*.cjs' \) -not -path './.git/*' | while read -r f; do
+        rm -rf /tmp/bisect-one && mkdir -p /tmp/bisect-one
+        cp "$f" "/tmp/bisect-one/$(basename "$f")"
+        cd /tmp/bisect-one
+        if ! timeout 3 glossa extract > /dev/null 2>&1; then
+          echo "HANG_OR_SLOW: $f" >> /tmp/bisect-results/hits.txt
+        fi
+        cd /tmp/postiz
+      done
+    - cp /tmp/bisect-results/hits.txt ./bisect-hits.txt || echo "no hits found" > ./bisect-hits.txt
+    - cat ./bisect-hits.txt
+  artifacts:
+    when: always
+    paths:
+      - bisect-hits.txt
+  allow_failure: true
+
 benchmark:real-repos:
   stage: benchmark
   image: rust:latest
