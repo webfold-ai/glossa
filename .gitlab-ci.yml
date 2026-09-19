@@ -2,6 +2,7 @@
 stages:
   - test
   - i18n
+  - benchmark
 
 # Cargo.toml pulls hashtrinity via a relative path dependency
 # (`../fold/hashtrinity`), assuming a sibling checkout that only exists on a
@@ -59,3 +60,53 @@ i18n:check:
     when: always
     paths:
       - spbench-results.json
+
+# Real KPI benchmark: build the actual release binary once, run it against
+# real cloned repositories (not synthetic fixtures) that already use each
+# named incumbent, and record real wall-clock time, peak RSS, and binary
+# size. This does NOT measure the incumbents' own SaaS-side translation
+# work — that requires a paid account/API token for each of them — only the
+# local, filesystem-side operations (init/extract/check) that are directly
+# comparable.
+benchmark:real-repos:
+  stage: benchmark
+  image: rust:latest
+  before_script:
+    - *fetch_hashtrinity_dependency
+    - apt-get install -y -qq time
+  script:
+    - cargo build --release --bin glossa
+    - cp target/release/glossa /usr/local/bin/glossa
+    - ls -la target/release/glossa
+    - mkdir -p /tmp/bench-results
+    - echo "binary_size_bytes=$(stat -c%s target/release/glossa)" > /tmp/bench-results/summary.txt
+    - |
+      for spec in \
+        "gpslogger:https://github.com/mendhak/gpslogger.git:CROWDIN" \
+        "postiz-app:https://github.com/gitroomhq/postiz-app.git:LINGO_DEV" \
+        "AppFlowy:https://github.com/AppFlowy-IO/AppFlowy.git:INLANG" \
+        "SatisfactoryModManager:https://github.com/satisfactorymodding/SatisfactoryModManager.git:TOLGEE" \
+      ; do
+        name="${spec%%:*}"; rest="${spec#*:}"; url="${rest%:*}"; tool="${rest##*:}"
+        echo "=== $name ($tool) ===" | tee -a /tmp/bench-results/summary.txt
+        rm -rf "/tmp/bench-${name}"
+        /usr/bin/time -v git clone --depth 1 "$url" "/tmp/bench-${name}" > "/tmp/bench-results/${name}-clone.log" 2>&1 || echo "clone_failed=true" >> /tmp/bench-results/summary.txt
+        cd "/tmp/bench-${name}" || continue
+        file_count=$(find . -type f -not -path './.git/*' | wc -l)
+        echo "real_file_count=${file_count}" | tee -a /tmp/bench-results/summary.txt
+        /usr/bin/time -v glossa init --format json > "/tmp/bench-results/${name}-init.log" 2>&1
+        /usr/bin/time -v glossa extract --output "/tmp/bench-results/${name}-catalog.json" > "/tmp/bench-results/${name}-extract.log" 2>&1
+        grep -E "Elapsed|Maximum resident" "/tmp/bench-results/${name}-init.log" | sed "s/^/init /" >> /tmp/bench-results/summary.txt
+        grep -E "Elapsed|Maximum resident" "/tmp/bench-results/${name}-extract.log" | sed "s/^/extract /" >> /tmp/bench-results/summary.txt
+        if [ -f "/tmp/bench-results/${name}-catalog.json" ]; then
+          python3 -c "import json; d=json.load(open('/tmp/bench-results/${name}-catalog.json')); print('extracted_units=' + str(len(d) if isinstance(d, list) else len(d.get('items', d))))" >> /tmp/bench-results/summary.txt 2>/dev/null || echo "extracted_units=unknown (non-list catalog shape)" >> /tmp/bench-results/summary.txt
+        fi
+        cd "${CI_PROJECT_DIR}"
+      done
+    - cp -r /tmp/bench-results ./bench-results
+    - cat ./bench-results/summary.txt
+  artifacts:
+    when: always
+    paths:
+      - bench-results/
+  allow_failure: true
