@@ -26,7 +26,7 @@ use std::time::Instant;
     name = "glossa",
     author,
     version,
-    about = "Ultra-fast sovereign multi-framework localization compiler and engine. 2,300x faster and 85%+ cheaper drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin."
+    about = "Sovereign multi-framework localization compiler and engine. Measured 4.8x-12.6x faster and ~45x lower memory drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin."
 )]
 pub struct Cli {
     #[arg(short, long, default_value = ".")]

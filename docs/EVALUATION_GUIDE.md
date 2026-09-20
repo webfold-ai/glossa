@@ -12,15 +12,15 @@ Modern software localization faces three operational crises:
 2. **The Speed & CI Crisis:** First-generation AI tools built on Node.js/Babel spend 15 milliseconds per file scanning codebases, consuming minutes of expensive CI compute and failing under monorepo scale.
 3. **The Regression Crisis:** Naive regex and string-matching extractors pull CSS classes, URLs, and code identifiers into translation tables, while unchecked LLM outputs drop `{variable}` placeholders, break HTML tags, and cause front-end crashes.
 
-Glossa resolves all three through a compiled, zero-dependency Rust engine that is **2,300× faster**, **85%+ cheaper**, and **provably zero-regression**.
+Glossa resolves all three through a compiled, zero-dependency Rust engine that is, measured against real incumbent tooling via the SPBench suite (see [README.md#empirical-benchmarks-spbench-suite](../README.md#empirical-benchmarks-spbench-suite)), **4.8×–12.6× faster** depending on subsystem, **~45× lower memory**, and **provably zero-regression**. (An earlier draft of this document claimed a blanket "2,300× faster, 85%+ cheaper" — that figure came from comparing Glossa against an assumed, never-measured ~15ms/file incumbent cost; real `@babel/parser` measurement puts that baseline at ~84 µs/file, ~180× lower than assumed, which is why the real speedup is single-digit-to-low-teens rather than 2,300×.)
 
 ### Evaluation Scorecard
 
 | Evaluation Dimension | Glossa (Rust) | Lingo.dev (Node.js) | Inlang / Paraglide | Crowdin / Lokalise | Weight |
 |---|---|---|---|---|---|
-| **Extraction Throughput** | **129,662 files/sec** | ~65 files/sec | ~120 files/sec | N/A (Batch HTTP) | 20% |
+| **Extraction Throughput** | **56,887 files/sec** (measured) | ~65 files/sec (unverified) | ~120 files/sec (unverified) | N/A (Batch HTTP) | 20% |
 | **CI Latency Impact** | **< 0.1s total run** | 15–45s per PR | 8–20s per PR | 30–120s webhook delay | 15% |
-| **Memory Footprint** | **7.4 MB RSS** | 380–650 MB | 220–450 MB | Cloud SaaS | 10% |
+| **Memory Footprint** | **8.3 MB RSS** (measured) | 375 MB (measured, `npx lingo.dev@latest --version`) | 220–450 MB (unverified) | Cloud SaaS | 10% |
 | **Framework Breadth** | **All (React, Vue, Svelte, Mobile, Backend)** | React JSX only | React, Svelte, Solid | String files only | 15% |
 | **Git Merge Resilience** | **0 Conflicts (Commutative Monoid)** | Frequent branch conflicts | Git lockfiles / cloud | Frequent PR bot collisions | 15% |
 | **Integrity & Safety** | **Mathematical AST Gate (100% caught)** | Regex heuristic | Linter warnings | Manual human review | 15% |

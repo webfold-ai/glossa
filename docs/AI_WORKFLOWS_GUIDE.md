@@ -95,7 +95,7 @@ When building autonomous coding agent swarms (e.g. using LangChain, AutoGPT, or 
 [Agent Generates UI Component]
               │
               ▼
-    [glossa extract]  ──► (Extracts translatable strings in 7.7 µs)
+    [glossa extract]  ──► (Extracts translatable strings in ~17.6 µs, measured)
               │
               ▼
    [glossa translate] ──► (Generates target translations)

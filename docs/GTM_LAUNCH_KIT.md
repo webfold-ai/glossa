@@ -1,7 +1,7 @@
 # Glossa Go-To-Market (GTM) Launch Kit & Developer Collateral
 
 > **Campaign:** Glossa v0.1 Public Launch  
-> **Tagline:** The Universal Sovereign Localization Engine. 2,300× Faster Drop-In Replacement for Lingo.dev, Tolgee, and Crowdin.
+> **Tagline:** The Universal Sovereign Localization Engine. A Measured 4.8×–12.6× Faster, ~45× Lower-Memory Drop-In Replacement for Lingo.dev, Tolgee, and Crowdin.
 
 ---
 
@@ -17,29 +17,29 @@
 
 If you have ever localized a modern web or mobile application, you know the pain:
 1. You either pay $50/seat/month for legacy SaaS platforms like Crowdin or Lokalise, waiting on slow webhooks and resolving endless Git merge conflicts in massive JSON dictionaries.
-2. Or you adopt modern AI developer tools like Lingo.dev—only to discover that your CI pipeline just slowed to a crawl because a Node.js/Babel script is taking 15 milliseconds per file to scan your codebase, spiking RAM past 500 MB and locking you strictly into React JSX.
+2. Or you adopt modern AI developer tools like Lingo.dev—only to discover that your CI pipeline slows down because a Node.js/Babel parse of your codebase runs at a measured ~84 µs per file, and the CLI itself carries a measured 375 MB peak RSS, plus locks you strictly into React JSX.
 
 When software refactors happen—like moving a component from Next.js to SvelteKit, or cleaning up template formatting—existing tools fail completely: they lose context, regenerate fresh keys, and spend expensive LLM tokens re-translating strings you already translated last week.
 
-We built **Glossa** to fix localization from first principles: 2,300× faster, 85%+ cheaper, with zero regressions.
+We built **Glossa** to fix localization from first principles: measured 4.8×–12.6× faster (depending on subsystem), ~45× lower memory, with zero regressions. (These are the real, CI-measured SPBench numbers — an earlier draft of this material claimed a blanket "2,300× faster, 85%+ cheaper," which traced back to an assumed, never-measured incumbent latency rather than an actual benchmark.)
 
 ### The Content-Addressed Invariant Ground
 
 Glossa is written in pure, zero-dependency Rust. It is grounded in an invariant content-addressed representation of UI text:
 
 1. **Universal Multi-Framework Lift**: In the same architectural spirit as Builder.io's Mitosis, Glossa parses React JSX, Vue SFCs, Svelte runes, Solid, HTML templates, Markdown, iOS Swift, Android Kotlin, and Flutter into a unified canonical intermediate representation (`CanonicalTerm`).
-2. **Content-Addressed Coordinates (`ContentCoord`)**: Differences in framework syntax (`{user}` in React, `{{user}}` in Vue, `%@` in Apple Objective-C/Swift) are quotiented out into a deterministic 64-bit coordinate. If you port your frontend from React to Svelte, **Glossa consumes the existing translations with 0 new LLM tokens** (85%+ cost savings).
+2. **Content-Addressed Coordinates (`ContentCoord`)**: Differences in framework syntax (`{user}` in React, `{{user}}` in Vue, `%@` in Apple Objective-C/Swift) are quotiented out into a deterministic 64-bit coordinate. If you port your frontend from React to Svelte, **Glossa consumes the existing translations with 0 new LLM tokens** — the dollar savings this produces scales with how much cross-framework duplication a given repo has.
 3. **Zero-Fault Integrity Gate**: LLMs are notorious for hallucinating syntax errors—dropping `{count}` variables, injecting unclosed `<b>` tags, or corrupting URLs. Glossa's Integrity Gate enforces strict mathematical slot and tag conservation at microsecond speeds. If a translation is corrupted, it is rejected instantly before it can reach your codebase.
 4. **Order-Free Monoidal Lockfile**: Merging Git branches in localization files has historically been a nightmare. Glossa's `glossa.lock` merges deterministically via commutative monoid fusion (`Table::fuse`). Two developers translating different pages simultaneously on separate branches merge with **zero Git conflicts**.
 
 ### Benchmark Highlights: Rust vs. Node.js
 
-We ran Glossa head-to-head against Lingo.dev and Babel across a 5,000-component codebase:
+We ran Glossa's SPBench suite against real, measured incumbent baselines (real `@babel/parser`+`@vue/compiler-sfc` invocations, a real Node.js regex validator, and real `npx lingo.dev@latest` CLI RSS) across a 5,000-component codebase, regenerated fresh on every CI run:
 
-- **Extraction Speed:** **7.7 microseconds / file** (vs. 15.2 ms in Node.js) — **1,971× faster**.
-- **Extraction Throughput:** **129,662 files / sec** (vs. ~65 files/sec in Node.js).
-- **Peak Memory (RSS):** **7.4 MB** (vs. 380–650 MB Node.js V8 heap) — **50× smaller**.
-- **Null-Gate Verification:** **526,395 checks / sec** with 100% corruption interception.
+- **Extraction Speed:** **17.6 microseconds / file** (vs. a measured 84.4 µs/file for real `@babel/parser`+`@vue/compiler-sfc`) — **4.8× faster**.
+- **Extraction Throughput:** **56,887 files / sec** (vs. a measured ~11,846 files/sec).
+- **Peak Memory (RSS):** **8.3 MB** (vs. a measured 375 MB for `npx lingo.dev@latest --version`) — **~45× smaller**.
+- **Null-Gate Verification:** **423,511 checks / sec** with 100% corruption interception (1.8× faster than a measured real Node.js regex validator baseline).
 
 ### Full Drop-In Compatibility
 
@@ -53,7 +53,7 @@ You do not need to rewrite your workflow. Glossa provides:
 
 ## 2. Hacker News: Show HN Pitch
 
-**Title:** *Show HN: Glossa – 2,300x faster Rust drop-in replacement for Lingo.dev and i18n tooling*
+**Title:** *Show HN: Glossa – a measured 4.8x faster, ~45x lower-memory Rust drop-in replacement for Lingo.dev and i18n tooling*
 
 **Body:**
 
@@ -62,14 +62,14 @@ Hey HN!
 We're open-sourcing Glossa (https://github.com/Ptyktos/glossa), a universal sovereign localization engine written in pure Rust.
 
 Like many of you, we loved the idea of AI-driven, developer-native localization popularized by Lingo.dev—continuous string extraction, lockfile diffing, and automated delta translation. But in practice, we ran into three walls:
-1. **Performance & Memory**: The Node.js/Babel toolchain took ~15ms per file, eating 500MB+ RAM and bogging down CI.
+1. **Performance & Memory**: The Node.js/Babel toolchain measures at ~84 µs per file to parse, and the CLI itself carries a measured 375 MB peak RSS, bogging down CI.
 2. **Framework Lock-in**: Almost everything was hardcoded for React JSX. If you had Vue, Svelte, Flutter, or backend Go/Python templates, you were out of luck.
 3. **Syntax Fragility**: Moving a string between frameworks or refactoring whitespace invalidated translation keys and wasted LLM tokens.
 
 We built Glossa with pure Rust engineering:
-- **Sub-microsecond AST extraction:** 129,000+ files/second in pure Rust, running at ~7.7 µs per file and idling under 7.5 MB RSS.
+- **Measured AST extraction:** ~56,900 files/second in pure Rust, running at ~17.6 µs per file (measured) and idling at ~8.3 MB RSS — 4.8× faster and ~45× lower memory than a real, measured `@babel/parser`+`lingo.dev` CLI baseline.
 - **Cross-Framework Canonical IR:** Like Mitosis, it lifts React, Vue SFCs, Svelte, Solid, Markdown, iOS Swift, Android XML, and Flutter into a canonical IR. A string ported between frameworks shares the exact same 64-bit coordinate (`ContentCoord`) with zero token re-spends.
-- **Integrity Gate Verification:** Verifies slot and HTML tag conservation mathematically (520k checks/sec) so LLMs can't break production by dropping `{user}` or injecting broken tags.
+- **Integrity Gate Verification:** Verifies slot and HTML tag conservation mathematically (423k checks/sec, measured) so LLMs can't break production by dropping `{user}` or injecting broken tags.
 - **Monoidal Lockfile:** Commutative merge law (`Table::fuse`) means zero Git merge conflicts when multiple developers translate strings across parallel branches.
 - **Drop-in Compatible:** Ships with both `glossa` and `lingo` binaries. It auto-detects existing `lingo.json` / `lingo.lock` or imports Inlang/Tolgee/Crowdin configs.
 - **New additions:** `glossa codegen` (zero-runtime TypeScript/Rust compile-time message accessors) and `glossa visual` (lightweight local in-context web inspector on port 3920).
@@ -88,21 +88,21 @@ Check out our benchmarks and regression suites in the repo. We’d love your fee
 ## 3. X / Twitter Launch Thread (7 Tweets)
 
 **Tweet 1 (Hook):**  
-Localization tools are stuck in 2015: $60/seat SaaS fees, slow Babel scripts taking 15ms/file, and LLMs hallucinating broken HTML tags into your UI.  
+Localization tools are stuck in 2015: $60/seat SaaS fees, Babel scripts that measure at ~84 µs/file to parse, and LLMs hallucinating broken HTML tags into your UI.  
 Today, we’re open-sourcing Glossa: a universal sovereign localization engine in pure Rust.  
-⚡ 129,000 files/sec  
+⚡ 56,887 files/sec (measured)  
 🧵👇
 
 **Tweet 2 (The Speedup):**  
 Glossa is a direct drop-in replacement for Lingo.dev, but built from scratch in Rust:  
-• Node.js / Babel: 15.2 ms / file  
-• Glossa (Rust): 7.7 µs / file  
-That’s a **1,970× speedup** in string extraction, idling at just 7.4 MB RSS instead of a 600 MB V8 heap. Your CI runner finishes before it even warms up.
+• Node.js / Babel (measured): 84.4 µs / file  
+• Glossa (Rust, measured): 17.6 µs / file  
+That’s a **4.8× speedup** in string extraction, idling at just 8.3 MB RSS instead of a measured 375 MB for lingo.dev's own CLI. Your CI runner finishes before it even warms up.
 
 **Tweet 3 (Mitosis for i18n):**  
 Framework lock-in is dead.  
 In the spirit of BuilderIO's Mitosis, Glossa lifts React JSX, Vue SFCs, Svelte runes, Solid, iOS Swift, Android XML, and Flutter into a unified canonical IR (`CanonicalTerm`).  
-Porting a component from React to Svelte? Glossa shares the exact same cache. 0 new tokens spent (85%+ savings).
+Porting a component from React to Svelte? Glossa shares the exact same cache. 0 new tokens spent.
 
 **Tweet 4 (The Integrity Gate):**  
 AI models love dropping `{username}` variables or closing `<b>` tags in the wrong order, causing production UI crashes.  
@@ -133,7 +133,7 @@ Let us know what you think! 🌐🦀
 ## 4. Reddit Announcement (r/rust & r/reactjs)
 
 **Subreddit:** r/rust  
-**Title:** *Glossa: A high-performance universal localization engine in Rust (129k files/sec, 7.4MB RSS)*  
+**Title:** *Glossa: A high-performance universal localization engine in Rust (56.9k files/sec, 8.3MB RSS, measured)*  
 
 **Post:**  
 Hey r/rust,  
@@ -141,7 +141,7 @@ We’ve been working on Glossa, an open-source localization compiler and engine 
 Most localization tools in the web ecosystem rely on Node.js/Babel AST walkers. In large codebases, extracting strings takes minutes and eats gigabytes of memory.  
 We built Glossa with zero external Node dependencies:
 - Parallel AST scanning across JSX, Vue, Svelte, HTML, and mobile formats using Rust's Rayon and streaming lexers.
-- Memory footprint is bounded under 8 MB RSS, running at 7.7 µs per file.
+- Memory footprint measured at 8.3 MB RSS, running at 17.6 µs per file (measured).
 - Commutative monoid lockfile merging ensures parallel Git branches never conflict.
 - Compiles down to zero-runtime type-safe Rust and TypeScript message accessors.
 Feedback and code reviews on our IR design are welcome: https://github.com/Ptyktos/glossa
@@ -152,10 +152,10 @@ Feedback and code reviews on our IR design are welcome: https://github.com/Ptykt
 
 **Name:** Glossa  
 **Tagline:** The Universal Sovereign Localization Engine in Rust  
-**Short Description:** 2,300× faster drop-in replacement for Lingo.dev and legacy TMS platforms. Extract, verify, and translate across React, Vue, Svelte, iOS, Android, and Flutter with zero runtime overhead, zero Git conflicts, and mathematical AI hallucination protection.  
+**Short Description:** A measured 4.8×–12.6× faster, ~45× lower-memory drop-in replacement for Lingo.dev and legacy TMS platforms. Extract, verify, and translate across React, Vue, Svelte, iOS, Android, and Flutter with zero runtime overhead, zero Git conflicts, and mathematical AI hallucination protection.  
 **Key Features:**
-- 7.7 µs / file extraction (129k files/sec)
-- Content-addressed 64-bit coordinate deduplication (85%+ savings)
+- 17.6 µs / file extraction (56.9k files/sec, measured)
+- Content-addressed 64-bit coordinate deduplication (savings scale with cross-framework duplication in your repo)
 - Zero-Fault Integrity Gate hallucination rejection
 - In-context visual editor (`localhost:3920`)
 - Zero-runtime type-safe codegen
