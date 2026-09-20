@@ -5,7 +5,7 @@
 
 ### Executive Summary
 
-Glossa is the high-performance, sovereign localization compiler and continuous translation platform built on the Apeiron algebraic coordinate ring $R[x]/(x^2 - \sigma)$ and Hashtrinity monoid accumulator. Glossa delivers a 1,300× speedup and 85%+ lower operating costs compared to legacy Node/Python-based localization stacks.
+Glossa is the high-performance, sovereign localization compiler and continuous translation platform built on the Apeiron algebraic coordinate ring $R[x]/(x^2 - \sigma)$ and Hashtrinity monoid accumulator. Measured via the SPBench suite against real incumbent tooling, Glossa delivers a 4.8×–12.6× speedup (depending on subsystem) and ~45× lower memory footprint compared to legacy Node/Python-based localization stacks — see [README.md#empirical-benchmarks-spbench-suite](../README.md#empirical-benchmarks-spbench-suite) for the measured, reproducible numbers. (An earlier draft claimed "1,300× speedup and 85%+ lower operating costs" — that figure was never independently measured and did not survive being checked against a real `@babel/parser` baseline.)
 
 This specification details the end-to-end architecture enabling Glossa to achieve **complete feature, format, ecosystem, and quality capability parity and subsumption** over:
 1. **Crowdin & Crowdin Store**: Complete format matrix, all featured store integrations (Git, Figma, CMS, Zendesk, Intercom, Mailchimp, Notion), and enterprise translation memory.

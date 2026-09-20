@@ -26,7 +26,7 @@ use std::time::Instant;
     name = "glossa",
     author,
     version,
-    about = "Ultra-fast sovereign multi-framework localization compiler and engine. 2,300x faster and 85%+ cheaper drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin."
+    about = "Sovereign multi-framework localization compiler and engine. Measured 4.8x-12.6x faster and ~45x lower memory drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin."
 )]
 pub struct Cli {
     #[arg(short, long, default_value = ".")]
@@ -751,7 +751,16 @@ fn run_spbench_suite(
     let b1_p90 = percentile(&latencies_us, 90.0);
     let b1_p99 = percentile(&latencies_us, 99.0);
     let b1_fps = count as f64 / b1_elapsed.as_secs_f64();
-    let b1_incumbent_us = 15200.0; // Node.js / Babel baseline: 15.2 ms per file
+    // REAL measured baseline, not an assumption: real @babel/parser (JSX
+    // half) + real @vue/compiler-sfc (Vue SFC half), on this exact sample
+    // content, 500-iteration JIT warmup + 5000 measured iterations each,
+    // Node v22.22.0. Measured 2026-09-19; re-measure with
+    // `node bench.mjs` (script kept alongside this fix) if the incumbent
+    // package versions change. Combined mean matches this function's own
+    // i%2==0 jsx/vue alternation. Previous value (15200.0, "15.2ms/file")
+    // was an unsourced assumption roughly 180x slower than the real number
+    // — inflating the reported speedup by the same factor.
+    let b1_incumbent_us = 84.42;
     let b1_speedup = b1_incumbent_us / b1_mean.max(0.001);
 
     // -------------------------------------------------------------
@@ -759,14 +768,28 @@ fn run_spbench_suite(
     // -------------------------------------------------------------
     let b2_count = count * 2;
     let mut lock = crate::lockfile::LingoLock::new();
+    let mut b2_latencies_ns = Vec::with_capacity(b2_count);
     let b2_start = Instant::now();
     for i in 0..b2_count {
+        let t0 = Instant::now();
         let coord = crate::ir::coord::ApeironCoord::from_str_canonical(&format!("Term #{i} in application context"));
         lock.record_translation(coord, "es", format!("Término #{i}"), "spbench", 1.0);
+        b2_latencies_ns.push(t0.elapsed().as_nanos() as f64);
     }
     let b2_elapsed = b2_start.elapsed();
     let b2_hash_ns = (b2_elapsed.as_nanos() as f64) / b2_count as f64;
-    let b2_speedup = 450.0;
+    b2_latencies_ns.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let b2_p50_ns = percentile(&b2_latencies_ns, 50.0);
+    let b2_p90_ns = percentile(&b2_latencies_ns, 90.0);
+    let b2_p99_ns = percentile(&b2_latencies_ns, 99.0);
+    // REAL measured baseline: plain Node.js object-property-assignment merge
+    // (the natural equivalent of "insert a translation record into a
+    // key-value store"), same 10000-op count, Node v22.22.0, measured
+    // 2026-09-19. Previous value (implicit via a hardcoded 450.0x multiplier
+    // with no baseline_us basis at all) was not derived from any
+    // measurement.
+    let b2_incumbent_us = 3.057;
+    let b2_speedup = b2_incumbent_us / (b2_hash_ns / 1000.0).max(0.0001);
 
     // -------------------------------------------------------------
     // BENCHMARK 3: Zero-Fault Integrity Gate Adversarial Verification
@@ -774,15 +797,30 @@ fn run_spbench_suite(
     let b3_count = count;
     let valid_src = "Welcome {user}, click <0>here</0> to proceed.";
     let valid_trans = "Bienvenido {user}, haz clic <0>aquí</0> para continuar.";
+    let mut b3_latencies_us = Vec::with_capacity(b3_count);
     let b3_start = Instant::now();
     let mut verified = 0;
     for _ in 0..b3_count {
-        if crate::engine::gate::ApeironNullGate::validate(valid_src, valid_trans).is_ok() {
+        let t0 = Instant::now();
+        let ok = crate::engine::gate::ApeironNullGate::validate(valid_src, valid_trans).is_ok();
+        b3_latencies_us.push(t0.elapsed().as_nanos() as f64 / 1000.0);
+        if ok {
             verified += 1;
         }
     }
     let b3_elapsed = b3_start.elapsed();
     let b3_rate = verified as f64 / b3_elapsed.as_secs_f64();
+    b3_latencies_us.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let b3_p50 = percentile(&b3_latencies_us, 50.0);
+    let b3_p90 = percentile(&b3_latencies_us, 90.0);
+    let b3_p99 = percentile(&b3_latencies_us, 99.0);
+    // REAL measured baseline: a real regex-based slot/{placeholder} and
+    // <N>tag</N> preservation validator in Node.js (the naive approach the
+    // "Regex wrapper" label describes), same sample strings, 500-iteration
+    // warmup, Node v22.22.0, measured 2026-09-19. Previous value (45.0,
+    // "12,000 checks/sec") was ~5.5x slower than what a real regex validator
+    // actually achieves in modern V8.
+    let b3_incumbent_us = 4.242; // 1e6 / 235773.5 checks/sec, measured
 
     // -------------------------------------------------------------
     // BENCHMARK 4: Multi-format Emitters (JSON, YAML, PO, Fluent)
@@ -791,13 +829,35 @@ fn run_spbench_suite(
     for i in 0..500 {
         catalog.insert(format!("key_{i}"), format!("Translated text #{i} for user {{user}}"));
     }
+    // Repeat the whole 4-emitter bulk call to get a real distribution
+    // (percentiles across repeated runs) instead of timing it once — a
+    // single measurement has no variance to report a percentile from.
+    const B4_ITERATIONS: usize = 200;
+    let mut b4_latencies_us = Vec::with_capacity(B4_ITERATIONS);
     let b4_start = Instant::now();
-    let _json = crate::emitters::resource::emit_json(&catalog);
-    let _yaml = crate::emitters::resource::emit_yaml(&catalog, "es");
-    let _po = crate::emitters::resource::emit_po(&catalog, "es");
-    let _ftl = crate::emitters::resource::emit_fluent(&catalog);
+    for _ in 0..B4_ITERATIONS {
+        let t0 = Instant::now();
+        let _json = crate::emitters::resource::emit_json(&catalog);
+        let _yaml = crate::emitters::resource::emit_yaml(&catalog, "es");
+        let _po = crate::emitters::resource::emit_po(&catalog, "es");
+        let _ftl = crate::emitters::resource::emit_fluent(&catalog);
+        b4_latencies_us.push(t0.elapsed().as_nanos() as f64 / 1000.0);
+    }
     let b4_elapsed = b4_start.elapsed();
-    let b4_terms_sec = (500.0 * 4.0) / b4_elapsed.as_secs_f64();
+    let b4_terms_sec = (500.0 * 4.0 * B4_ITERATIONS as f64) / b4_elapsed.as_secs_f64();
+    b4_latencies_us.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let b4_p50 = percentile(&b4_latencies_us, 50.0) / (500.0 * 4.0);
+    let b4_p90 = percentile(&b4_latencies_us, 90.0) / (500.0 * 4.0);
+    let b4_p99 = percentile(&b4_latencies_us, 99.0) / (500.0 * 4.0);
+    // REAL measured baseline: real JSON.stringify + real js-yaml.dump + real
+    // gettext-parser PO compile on the same 500-key catalog, Node v22.22.0,
+    // measured 2026-09-19. Only 3 formats (JSON/YAML/PO), not glossa's 4
+    // (JSON/YAML/PO/Fluent) — a real fluent.js measurement wasn't taken
+    // rather than fabricating a 4th data point, so this baseline is
+    // marginally favorable to glossa (missing the 4th format's cost on the
+    // incumbent side). Previous value (850.0, unsourced) was ~194x slower
+    // than the real 3-format number.
+    let b4_incumbent_us = 4.385;
 
     let rss_mb = get_peak_rss_mb();
 
@@ -820,10 +880,10 @@ fn run_spbench_suite(
             total_ms: b2_elapsed.as_secs_f64() * 1000.0,
             throughput_per_sec: b2_count as f64 / b2_elapsed.as_secs_f64(),
             mean_us: b2_hash_ns / 1000.0,
-            p50_us: b2_hash_ns / 1000.0,
-            p90_us: (b2_hash_ns * 1.2) / 1000.0,
-            p99_us: (b2_hash_ns * 1.5) / 1000.0,
-            incumbent_baseline_us: 180.0,
+            p50_us: b2_p50_ns / 1000.0,
+            p90_us: b2_p90_ns / 1000.0,
+            p99_us: b2_p99_ns / 1000.0,
+            incumbent_baseline_us: b2_incumbent_us,
             speedup_vs_incumbent: b2_speedup,
         },
         BenchmarkResult {
@@ -832,50 +892,54 @@ fn run_spbench_suite(
             total_ms: b3_elapsed.as_secs_f64() * 1000.0,
             throughput_per_sec: b3_rate,
             mean_us: b3_elapsed.as_micros() as f64 / b3_count as f64,
-            p50_us: 0.18,
-            p90_us: 0.24,
-            p99_us: 0.45,
-            incumbent_baseline_us: 45.0,
-            speedup_vs_incumbent: 250.0,
+            p50_us: b3_p50,
+            p90_us: b3_p90,
+            p99_us: b3_p99,
+            incumbent_baseline_us: b3_incumbent_us,
+            speedup_vs_incumbent: b3_incumbent_us / (b3_elapsed.as_micros() as f64 / b3_count as f64).max(0.0001),
         },
         BenchmarkResult {
             name: "Universal Emitters (JSON/YAML/PO/Fluent)".to_string(),
-            count: 2000,
+            count: 2000 * B4_ITERATIONS,
             total_ms: b4_elapsed.as_secs_f64() * 1000.0,
             throughput_per_sec: b4_terms_sec,
-            mean_us: b4_elapsed.as_micros() as f64 / 2000.0,
-            p50_us: 0.95,
-            p90_us: 1.40,
-            p99_us: 2.10,
-            incumbent_baseline_us: 850.0,
-            speedup_vs_incumbent: 890.0,
+            mean_us: b4_elapsed.as_micros() as f64 / (2000.0 * B4_ITERATIONS as f64),
+            p50_us: b4_p50,
+            p90_us: b4_p90,
+            p99_us: b4_p99,
+            incumbent_baseline_us: b4_incumbent_us,
+            speedup_vs_incumbent: b4_incumbent_us / (b4_elapsed.as_micros() as f64 / (2000.0 * B4_ITERATIONS as f64)).max(0.0001),
         },
     ];
 
+    // Every baseline below is a real measurement (see bench.mjs / bench2_3.mjs
+    // / bench4.mjs, and the real `npx lingo.dev@latest --version` RSS
+    // measurement), not an assumption — methodology documented at each
+    // `*_incumbent_us` constant above. Measured 2026-09-19, Node v22.22.0.
     let three_column = vec![
         ThreeColumnRow {
             subsystem: "Project Ingestion (Universal Lift)".to_string(),
             quality_fidelity: "100% Extracted (0 Parse Errors)".to_string(),
             speed_ptyktos: format!("{:.0} files/sec ({:.2} µs/file)", b1_fps, b1_mean),
-            baseline_incumbent: "~65 files/sec (~15.2 ms/file, Babel)".to_string(),
+            baseline_incumbent: format!("{:.0} files/sec ({:.2} µs/file, real @babel/parser+@vue/compiler-sfc)", 1_000_000.0 / b1_incumbent_us, b1_incumbent_us),
         },
         ThreeColumnRow {
             subsystem: "Coordinate Deduplication".to_string(),
             quality_fidelity: "Order-Free Monoid (0 Git Conflicts)".to_string(),
             speed_ptyktos: format!("{:.1} ns / coordinate", b2_hash_ns),
-            baseline_incumbent: "220 µs / key (JSON merge, Node.js)".to_string(),
+            baseline_incumbent: format!("{:.2} µs / key (real Node.js object-merge)", b2_incumbent_us),
         },
         ThreeColumnRow {
             subsystem: "Null-Gate Validation".to_string(),
             quality_fidelity: "100% Slot & Tag Conservation".to_string(),
             speed_ptyktos: format!("{:.0} checks/sec", b3_rate),
-            baseline_incumbent: "12,000 checks/sec (Regex wrapper)".to_string(),
+            baseline_incumbent: format!("{:.0} checks/sec (real Node.js regex validator)", 1_000_000.0 / b3_incumbent_us),
         },
         ThreeColumnRow {
             subsystem: "Memory Footprint (RSS)".to_string(),
             quality_fidelity: "Zero Leak (Static Lifetime)".to_string(),
             speed_ptyktos: format!("{:.1} MB RSS", rss_mb),
-            baseline_incumbent: "380 - 650 MB (Node.js V8 Heap)".to_string(),
+            baseline_incumbent: "375.0 MB (real `npx lingo.dev@latest --version` peak RSS)".to_string(),
         },
     ];
 
@@ -905,7 +969,7 @@ fn run_spbench_suite(
     println!("  Latency (p50):       {:.2} µs", b1_p50);
     println!("  Latency (p90):       {:.2} µs", b1_p90);
     println!("  Latency (p99):       {:.2} µs", b1_p99);
-    println!("  Incumbent Baseline:  ~15.2 ms/file (Node.js / Babel / lingo.dev)");
+    println!("  Incumbent Baseline:  {:.2} µs/file (real @babel/parser + @vue/compiler-sfc measurement)", b1_incumbent_us);
     println!("  SPEEDUP:             {:.1}x FASTER", b1_speedup);
     println!("\nBENCHMARK 2: CONTENT-ADDRESSED COORDINATE CACHE & LOCKFILE MERGE");
     println!("  Coordinate Hash:     {:.2} ns/term (Fibonacci k*Phi)", b2_hash_ns);

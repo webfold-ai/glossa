@@ -19,6 +19,7 @@ use glossa::parsers::resource::{
 };
 use glossa::parsers::svelte::extract_svelte;
 use glossa::parsers::vue::extract_vue;
+use glossa::ir::term::ApeironTerm;
 use std::collections::BTreeMap;
 
 // =========================================================================
@@ -336,6 +337,118 @@ fn test_regression_android_xml() {
     assert_eq!(items.len(), 3);
     assert!(items.iter().any(|i| i.key.as_deref() == Some("app_name")));
     assert!(items.iter().any(|i| i.canonical_text == "Apeiron Kernel Monitor"));
+}
+
+/// Real fixture: verbatim lines from `mendhak/gpslogger`'s actual
+/// `strings.xml` (a real, live Crowdin-using Android app). Regression guard
+/// for a bug found by testing against this real file: numeric XML character
+/// references (`&#160;` non-breaking space, `&#176;` degree sign, `&#189;`
+/// half fraction — 18 total occurrences in this one real file, 0 named
+/// entities) were left as literal un-decoded text instead of the actual
+/// characters they represent.
+#[test]
+fn test_regression_android_xml_real_world_numeric_entities() {
+    let xml_source = r#"
+    <?xml version="1.0" encoding="utf-8" ?>
+    <resources>
+        <string name="foot">&#160;foot</string>
+        <string name="feet">&#160;feet</string>
+        <string name="time_halfminute">&#189; minute</string>
+        <string name="time_oneandhalfhours">1&#189; hours</string>
+        <string name="degree_symbol" translatable="false">&#176;</string>
+    </resources>
+    "#;
+
+    let items = extract_android_xml(xml_source, "res/values/strings.xml");
+    assert_eq!(items.len(), 5);
+
+    let foot = items.iter().find(|i| i.key.as_deref() == Some("foot")).unwrap();
+    assert_eq!(foot.canonical_text, "\u{00A0}foot", "must decode &#160; to an actual non-breaking space, not keep the literal text");
+
+    let half = items.iter().find(|i| i.key.as_deref() == Some("time_halfminute")).unwrap();
+    assert_eq!(half.canonical_text, "\u{00BD} minute", "must decode &#189; to the actual ½ character");
+
+    let mixed = items.iter().find(|i| i.key.as_deref() == Some("time_oneandhalfhours")).unwrap();
+    assert_eq!(mixed.canonical_text, "1\u{00BD} hours");
+
+    let degree = items.iter().find(|i| i.key.as_deref() == Some("degree_symbol")).unwrap();
+    assert_eq!(degree.canonical_text, "\u{00B0}", "must decode &#176; to the actual degree sign");
+}
+
+/// Confirms named XML entities (not present in the gpslogger fixture above,
+/// but standard and common in other real Android/iOS/web catalogs) decode
+/// correctly and that a malformed/unrecognized entity is left as literal
+/// text rather than silently eating characters.
+#[test]
+fn test_regression_android_xml_named_entities_and_malformed_fallback() {
+    let xml_source = r#"
+    <resources>
+        <string name="terms">Terms &amp; Conditions</string>
+        <string name="compare">5 &lt; 10 &gt; 3</string>
+        <string name="not_an_entity">Ships &amp Handling</string>
+    </resources>
+    "#;
+
+    let items = extract_android_xml(xml_source, "res/values/strings.xml");
+    let terms = items.iter().find(|i| i.key.as_deref() == Some("terms")).unwrap();
+    assert_eq!(terms.canonical_text, "Terms & Conditions");
+
+    let compare = items.iter().find(|i| i.key.as_deref() == Some("compare")).unwrap();
+    assert_eq!(compare.canonical_text, "5 < 10 > 3");
+
+    // "&amp Handling" (no trailing semicolon before the next word) is not a
+    // well-formed entity — the '&' must survive as a literal character
+    // rather than the decoder eating "amp Handling" looking for a ';'.
+    let malformed = items.iter().find(|i| i.key.as_deref() == Some("not_an_entity")).unwrap();
+    assert!(malformed.canonical_text.contains('&'), "malformed entity must fall back to a literal '&', not silently drop text");
+}
+
+// =========================================================================
+// 10b. INLANG MESSAGE REFERENCES IN REAL JSON CATALOGS
+// =========================================================================
+
+/// Real fixture: verbatim entries from `AppFlowy-IO/AppFlowy`'s actual
+/// production translation catalog
+/// (`frontend/resources/translations/en-US.json`, a real, live inlang user
+/// whose own `project.inlang/settings.json` declares
+/// `variableReferencePattern: ["@:"]`). 44 occurrences of `@:identifier`
+/// message references exist in that one real file. Regression guard for a
+/// gap found by testing extraction against it: `@:appName` was extracted as
+/// plain translatable text with no slot, so a translation provider would see
+/// the literal characters "@:appName" as English words rather than a
+/// verbatim cross-reference to another key's value.
+#[test]
+fn test_regression_inlang_message_reference_real_world_appflowy() {
+    let json = r#"{
+        "appName": "AppFlowy",
+        "welcomeText": "Welcome to @:appName",
+        "signUp": {
+            "title": "Sign Up to @:appName"
+        },
+        "chat": {
+            "changeFormat": { "text": "Text" },
+            "textWithImageDescription": "@:chat.changeFormat.text with image"
+        }
+    }"#;
+
+    let items = extract_json(json, "translations/en-US.json");
+
+    let welcome = items.iter().find(|i| i.key.as_deref() == Some("welcomeText")).unwrap();
+    assert!(
+        welcome.terms.iter().any(|t| matches!(t, ApeironTerm::Slot { name, .. } if name == "appName")),
+        "`@:appName` must become a Slot term, not get flattened into plain translatable text"
+    );
+
+    let signup = items.iter().find(|i| i.key.as_deref() == Some("signUp.title")).unwrap();
+    assert!(signup.terms.iter().any(|t| matches!(t, ApeironTerm::Slot { name, .. } if name == "appName")));
+
+    // Dotted-path reference (@:chat.changeFormat.text) must be captured whole,
+    // not truncated at the first '.' the way a bare identifier scan might.
+    let nested_ref = items.iter().find(|i| i.key.as_deref() == Some("chat.textWithImageDescription")).unwrap();
+    assert!(
+        nested_ref.terms.iter().any(|t| matches!(t, ApeironTerm::Slot { name, .. } if name == "chat.changeFormat.text")),
+        "dotted-path message reference must be captured in full: {:?}", nested_ref.terms
+    );
 }
 
 // =========================================================================

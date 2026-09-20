@@ -20,9 +20,9 @@ Software localization (i18n / l10n) is undergoing a generational inflection. The
 | Capability / Metric | **Glossa** | **Lingo.dev** | **Inlang / Paraglide** | **Tolgee** | **Crowdin / Lokalise** |
 |---|---|---|---|---|---|
 | **Core Language** | Pure Rust (Zero-dep) | TypeScript / Node.js | TypeScript / Node.js | Java (Spring) + TS | Proprietary SaaS |
-| **Throughput (Files/sec)** | **129,662 files/sec** | ~65 files/sec | ~120 files/sec | N/A (Server-bound) | N/A (Web/REST API) |
-| **Extraction Latency** | **7.7 µs / file** | 15.2 ms / file | 8.4 ms / file | N/A | Batch HTTP poll |
-| **Memory Footprint (RSS)**| **7.4 MB** | 380–650 MB (V8) | 220–450 MB | 1.2–2.5 GB (JVM) | Closed SaaS |
+| **Throughput (Files/sec)** | **56,887 files/sec** (measured) | ~11,846 files/sec (measured, real `@babel/parser`) | ~120 files/sec (unverified) | N/A (Server-bound) | N/A (Web/REST API) |
+| **Extraction Latency** | **17.6 µs / file** (measured) | 84.4 µs / file (measured, real `@babel/parser`+`@vue/compiler-sfc`) | 8.4 ms / file (unverified) | N/A | Batch HTTP poll |
+| **Memory Footprint (RSS)**| **8.3 MB** (measured) | 375 MB (measured, `npx lingo.dev@latest --version`) | 220–450 MB (unverified) | 1.2–2.5 GB (JVM, unverified) | Closed SaaS |
 | **Framework Scope** | React, Vue, Svelte, Solid, HTML, MD, iOS, Android, Flutter, Python, Go, Ruby, PHP | React / JSX only | React, Svelte, Solid (Plugins) | React, Vue, Svelte (SDKs) | File catalogs (JSON, PO, etc.) |
 | **Drop-in Compatibility** | **Yes (`lingo` shim, imports 5 formats)** | Native | Proprietary config | Proprietary SDK | CLI wrappers |
 | **Translation Invariant** | 64-bit Content Coordinate (`ContentCoord`) | String literal key | Function key | String key | Key / Project ID |
@@ -42,8 +42,8 @@ Software localization (i18n / l10n) is undergoing a generational inflection. The
 ### A. Glossa (Universal Sovereign Engine)
 
 #### Strengths
-- **Sub-Microsecond Speed**: Processes 129,000+ files per second (~7.7 µs per file), running 1,900×–2,300× faster than Node.js/Babel compilers.
-- **Microscopic Footprint**: Pure Rust standalone binary under 8 MB, idling under 7.5 MB RSS memory. Operates in low-spec CI runners, Docker containers, and edge appliances without OOM risk.
+- **Fast, Verified Extraction**: Processes ~56,900 files per second (~17.6 µs per file, measured), running 4.8× faster than a real, measured `@babel/parser`+`@vue/compiler-sfc` baseline — not the ~1,900×–2,300× figure an earlier draft of this document claimed, which came from an assumed rather than measured incumbent latency.
+- **Small Footprint**: Pure Rust standalone binary under 8 MB, idling at ~8.3 MB RSS memory (measured) versus a measured 375 MB for `lingo.dev`'s own CLI — a ~45× reduction. Operates in low-spec CI runners, Docker containers, and edge appliances without OOM risk.
 - **Cross-Framework Canonical IR (`CanonicalTerm`)**: Operates like Builder.io's Mitosis. Component UI strings are lifted into an invariant canonical IR. Moving a component between Next.js, Nuxt, SvelteKit, or Flutter incurs zero token re-spends.
 - **Mathematical Integrity Gate Verification**: Strictly guarantees variable slot conservation (`{user}`) and HTML tag conservation (`<0>...</0>`), eliminating prompt-injection attacks and malformed UI crashes before CI merges.
 - **Monoidal Lockfile**: `lingo.lock` / `glossa.lock` merge deterministically as a commutative monoid (`Table::fuse`), eliminating Git merge conflicts across parallel developer branches.
@@ -83,7 +83,7 @@ Software localization (i18n / l10n) is undergoing a generational inflection. The
 - Could adopt Rust AST tooling (OXC or SWC) to improve extraction speed.
 
 #### Threats
-- Direct obsolescence by Glossa, which provides the exact same CLI UX and lockfile format, but runs 2,300× faster across all frameworks.
+- Direct obsolescence by Glossa, which provides the exact same CLI UX and lockfile format, but runs 4.8× faster (measured) across all frameworks with ~45× lower memory.
 
 ---
 
@@ -133,7 +133,7 @@ Software localization (i18n / l10n) is undergoing a generational inflection. The
 | Feature Dimension | Incumbent Landscape | The Glossa Paradigm |
 |---|---|---|
 | **Architecture** | Fragmented Node.js scripts & heavy SaaS databases | Sovereign, unified Rust binary (<8 MB) |
-| **Speed** | 15–150 ms per file | **7.7 microseconds per file (2,300x faster)** |
+| **Speed** | 84.4 µs per file (measured, real `@babel/parser`+`@vue/compiler-sfc`) | **17.6 microseconds per file (4.8x faster, measured)** |
 | **Cross-Framework** | Siloed plugins per framework | **Universal Canonical IR (Mitosis spirit)** |
 | **Reliability** | Unchecked LLM output or manual QA | **Integrity Gate mathematical proof (0 regressions)** |
 | **Git Safety** | Daily merge conflict hell on lockfiles | **Commutative monoid fusion (`Table::fuse`) — 0 conflicts** |

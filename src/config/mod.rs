@@ -70,6 +70,20 @@ impl LingoConfig {
                 }
             }
         }
+        // Lingo.dev's current real config is `i18n.json`, whose schema
+        // (`locale: {source, targets}`, object-shaped `provider`, `buckets`)
+        // does not match `LingoConfig`'s own field layout, so it can't be
+        // deserialized directly into `Self` the way `lingo.json` is above.
+        // Route it through the importer's real-schema parser instead.
+        if dir.as_ref().join("i18n.json").exists() {
+            let mut cfg = Self::default();
+            for import in crate::importer::detect_incumbent_systems(dir.as_ref()) {
+                if import.system == crate::importer::IncumbentSystem::LingoDev {
+                    crate::importer::import_to_glossa_config(&import, &mut cfg);
+                    return cfg;
+                }
+            }
+        }
         Self::default()
     }
 

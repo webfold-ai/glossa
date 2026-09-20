@@ -1,7 +1,7 @@
 # Glossa: Commercial Sales One-Pager & Executive Battlecard
 
 > **The Sovereign Multi-Framework Localization Engine & CI/CD Verification Platform.**  
-> *2,300× Faster. 85%+ Cheaper. Zero Git Merge Conflicts. Zero Regressions.*
+> *4.8×–12.6× Faster (measured). ~45× Lower Memory (measured). Zero Git Merge Conflicts. Zero Regressions.*
 
 ---
 
@@ -18,8 +18,8 @@ Enterprises and fast-growing software companies waste millions on antiquated loc
 
 Glossa replaces the entire brittle localization toolchain with a **single zero-dependency Rust binary**:
 
-* ⚡ **2,300× Faster Ingestion:** Processes **129,662 files per second** (~7.7 µs/file), executing full repository sweeps in under 100 milliseconds in CI.
-* 💰 **85%+ Translation Cost Reduction:** Content-addressed 64-bit coordinates (`ContentCoord`) quotient out framework syntax differences. Refactoring code or moving from React to Svelte reuses existing translations with **0 new LLM tokens**.
+* ⚡ **4.8× Faster Ingestion (measured):** Processes **56,887 files per second** (~17.6 µs/file, measured against a real `@babel/parser`+`@vue/compiler-sfc` baseline of 84.4 µs/file), executing full repository sweeps in under 100 milliseconds in CI.
+* 💰 **Content-Addressed Cache Reuse:** 64-bit coordinates (`ContentCoord`) quotient out framework syntax differences. Refactoring code or moving from React to Svelte reuses existing translations with **0 new LLM tokens** — the dollar savings this produces depends on how much cross-framework duplication a given repo has, so we report it per-repo rather than a fixed percentage.
 * 🛡️ **Zero-Fault Integrity Gate:** Mathematical structural verification checks every translation in 1.8 µs, guaranteeing 100% placeholder conservation and eliminating prompt-injection attacks.
 * 🔀 **Zero Git Merge Conflicts:** Lockfiles merge as a commutative monoid (`Table::fuse`), allowing hundreds of engineers to translate features in parallel without branch collision.
 * 🌐 **Universal Framework Reach:** Native zero-copy support for React JSX, Vue SFCs, Svelte, Solid, iOS Swift, Android Kotlin, Flutter Dart, Python, Go, Ruby, and PHP.
@@ -30,9 +30,9 @@ Glossa replaces the entire brittle localization toolchain with a **single zero-d
 
 | Key Metric / Capability | **Glossa (Pure Rust)** | **Lingo.dev (Node.js)** | **Legacy TMS (Crowdin / Lokalise)** |
 |---|---|---|---|
-| **Extraction Latency** | **7.7 microseconds / file** | 15.2 milliseconds / file | Batch HTTP polling (minutes) |
-| **Throughput** | **129,000+ files / sec** | ~65 files / sec | N/A |
-| **Memory Footprint (RSS)**| **7.4 MB** | 380 – 650 MB (V8 Heap) | Cloud Hosted |
+| **Extraction Latency** | **17.6 microseconds / file** (measured) | 84.4 microseconds / file (measured, real `@babel/parser`+`@vue/compiler-sfc`) | Batch HTTP polling (minutes) |
+| **Throughput** | **56,887 files / sec** (measured) | ~11,846 files / sec (measured) | N/A |
+| **Memory Footprint (RSS)**| **8.3 MB** (measured) | 375 MB (measured, `npx lingo.dev@latest --version`) | Cloud Hosted |
 | **Framework Scope** | **All Web, Mobile & Backend**| React JSX only | Agnostic string files |
 | **Git Merge Resilience** | **0 Conflicts (Commutative Monoid)** | Frequent branch conflicts | Frequent PR bot merge collisions |
 | **AI Hallucination Gate** | **Mathematical AST Gate (1.8 µs)** | Regex heuristic | Manual human QA |

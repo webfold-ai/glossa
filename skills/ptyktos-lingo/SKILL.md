@@ -1,6 +1,6 @@
 ---
 name: ptyktos-lingo
-description: 2,300x faster, 85%+ cheaper universal multi-framework localization compiler and CI/CD translation engine. Automates string extraction, AI translation with Integrity Gate verification, lockfile monoid merging, and CI checks.
+description: Measured 4.8x-12.6x faster, ~45x lower memory universal multi-framework localization compiler and CI/CD translation engine. Automates string extraction, AI translation with Integrity Gate verification, lockfile monoid merging, and CI checks.
 ---
 
 # ptyktos-lingo Agent Skill

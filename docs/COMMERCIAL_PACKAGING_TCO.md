@@ -8,11 +8,11 @@
 
 In modern software organizations, localization (i18n / l10n) incurs a dual tax:
 1. **The Human & Seat Tax**: Incumbent TMS platforms (Crowdin, Lokalise) charge $40–$80 per developer/manager seat per month, plus tier surcharges for hosted keys. For a mid-size organization of 40 developers and product managers, this represents **$24,000–$38,400 annually** in recurring SaaS subscription costs.
-2. **The LLM Token & CI Tax**: First-generation AI localization tools (like Lingo.dev) lack canonical coordinate deduplication. When developers refactor components, modify whitespace, or switch frameworks (e.g. React to Svelte), their naive string caches invalidate, re-querying expensive LLM APIs. Furthermore, slow Node.js/Babel scans (15 ms/file) consume expensive CI runner minutes on every pull request.
+2. **The LLM Token & CI Tax**: First-generation AI localization tools (like Lingo.dev) lack canonical coordinate deduplication. When developers refactor components, modify whitespace, or switch frameworks (e.g. React to Svelte), their naive string caches invalidate, re-querying expensive LLM APIs. Furthermore, Node.js/Babel scans (measured at ~84 µs/file) consume CI runner minutes on every pull request.
 
 **Glossa eliminates both taxes completely**:
-- **7.4 MB pure Rust binary** running in 7.7 microseconds per file (2,300× faster CI).
-- **Content-addressed 64-bit coordinates (`ContentCoord`)**: Refactoring code or switching frameworks results in **0 token re-spends** (85%+ translation cost savings).
+- **8.3 MB pure Rust binary** running at 17.6 microseconds per file — a measured 4.8× faster extraction and ~45× lower CI memory footprint than a real `lingo.dev` CLI baseline (see [README.md#empirical-benchmarks-spbench-suite](../README.md#empirical-benchmarks-spbench-suite)).
+- **Content-addressed 64-bit coordinates (`ContentCoord`)**: Refactoring code or switching frameworks results in **0 token re-spends** — the dollar savings scale with how much cross-framework duplication a given repo has.
 - **Sovereign air-gapped node**: Run local LLMs (Ollama / vLLM / Ptyktos API) inside private VPCs with **$0 per-seat SaaS tax**.
 
 ---

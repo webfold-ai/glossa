@@ -1,13 +1,15 @@
 # Glossa (`glossa`)
 
 > **Universal Sovereign Localization Engine & CI/CD Verification Platform.**  
-> 2,300× faster, 85%+ cheaper drop-in replacement for [Lingo.dev](https://github.com/lingodotdev/lingo.dev), [Inlang](https://inlang.com), [Tolgee](https://tolgee.io), and [Crowdin](https://crowdin.com).  
+> 4.8× faster extraction, ~45× lower memory drop-in replacement for [Lingo.dev](https://github.com/lingodotdev/lingo.dev), [Inlang](https://inlang.com), [Tolgee](https://tolgee.io), and [Crowdin](https://crowdin.com).  
 > Built in pure, zero-dependency Rust in the universal cross-framework spirit of **Mitosis**.
+>
+> *Measured against real incumbent tooling (`@babel/parser` + `@vue/compiler-sfc` for extraction, `npx lingo.dev@latest` for memory), regenerated fresh on every CI run — see [Empirical Benchmarks: SPBench Suite](#empirical-benchmarks-spbench-suite) below.*
 
 [![CI](https://github.com/Ptyktos/glossa/actions/workflows/ci.yml/badge.svg)](https://github.com/Ptyktos/glossa/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Binary Size](https://img.shields.io/badge/binary%20size-7.9%20MB-brightgreen.svg)](https://github.com/Ptyktos/glossa)
-[![Throughput](https://img.shields.io/badge/throughput-129%2C000%20files%2Fsec-orange.svg)](docs/SWOT_ANALYSIS.md)
+[![Throughput](https://img.shields.io/badge/throughput-~57%2C000%20files%2Fsec-orange.svg)](docs/SWOT_ANALYSIS.md)
 [![Zero Regression](https://img.shields.io/badge/regression%20rate-0.0%25-brightgreen.svg)](tests/zero_regression_proof.rs)
 
 ---
@@ -33,12 +35,12 @@ glossa extract && glossa check --ci
 
 ## Why Glossa?
 
-Modern localization is burdened by two extremes: **legacy per-seat SaaS tools** (Crowdin, Lokalise) that cost $50/seat/month and cause constant Git merge conflicts, and **first-generation Node.js CLI tools** (Lingo.dev) that suffer from 15ms/file Babel parsing overhead, high memory usage (350–600 MB), strict React lock-in, and fragile string caches.
+Modern localization is burdened by two extremes: **legacy per-seat SaaS tools** (Crowdin, Lokalise) that cost $50/seat/month and cause constant Git merge conflicts, and **first-generation Node.js CLI tools** (Lingo.dev) that suffer from real, measured `@babel/parser`+`@vue/compiler-sfc` overhead of ~84 µs/file, high CLI memory usage (measured: 375 MB peak RSS for `npx lingo.dev@latest --version`), strict React lock-in, and fragile string caches.
 
 **Glossa eliminates both bottlenecks with pure Rust engineering:**
 
-1. **2,300× Faster Native Execution**: Scans 129,000+ files per second (~7.7 µs per file) using streaming zero-copy tokenizers, idling at just 7.4 MB RSS memory (vs 400MB+ in Node.js).
-2. **85%+ Translation Cost Reduction**: Content-addressed 64-bit coordinates (`ContentCoord`) quotient out framework syntax differences. Moving a component from React to Svelte shares the exact same translation cache with **zero token re-spends**.
+1. **4.8× Faster Native Execution**: Scans ~57,000 files per second (~17.6 µs per file, measured) using streaming zero-copy tokenizers, idling at just 8.3 MB RSS memory (vs a measured 375 MB for `lingo.dev`'s own CLI) — a ~45× memory reduction.
+2. **Content-Addressed Translation Cache**: 64-bit coordinates (`ContentCoord`) quotient out framework syntax differences. Moving a component from React to Svelte shares the exact same translation cache with **zero token re-spends** — the cost reduction this delivers scales with how much cross-framework duplication exists in a given repo, so we report it per-repo rather than as a single blanket percentage.
 3. **The Mitosis Philosophy (Universal Multi-Framework IR)**: Lifts React JSX, Vue SFCs, Svelte runes, Solid, HTML templates, Markdown, iOS Swift, Android XML, and Flutter Dart into a single canonical intermediate representation (`CanonicalTerm`).
 4. **Zero-Fault Integrity Gate (`IntegrityGate`)**: Mathematical structural verification guards against LLM hallucinations. Dropped `{count}` variables, corrupted markup tags (`<0>...</0>`), and injected HTML/scripts are rejected in 1.8 µs before breaking production UI.
 5. **Zero Git Merge Conflicts (Monoidal Lockfile)**: `glossa.lock` and `lingo.lock` merge via commutative monoid fusion (`Table::fuse`). Two developers translating different features in parallel merge branches with **zero Git conflicts**.
@@ -85,16 +87,18 @@ Modern localization is burdened by two extremes: **legacy per-seat SaaS tools** 
 
 ## Empirical Benchmarks: SPBench Suite
 
-Tested across 5,000 synthetic components on Linux x86_64:
+These numbers are **not assumed** — every incumbent baseline is a real measurement (real `@babel/parser` + `@vue/compiler-sfc` invocations, a real Node.js object-merge, a real Node.js regex validator, and a real `npx lingo.dev@latest --version` process for RSS), and `spbench-results.json` is regenerated fresh on every CI run (`.github/workflows/ci.yml`) rather than hand-edited — see the [scripts/spbench-baselines/](scripts/spbench-baselines/) directory for the runnable Node.js scripts that produced each baseline. Tested across 5,000 synthetic components on Linux x86_64 (GitHub Actions `ubuntu-latest`):
 
-| Benchmark Subsystem | Glossa (Rust) | Incumbent Baseline (Node.js / Babel) | Speedup / Efficiency |
+| Benchmark Subsystem | Glossa (Rust) | Incumbent Baseline (real, measured) | Speedup |
 |---|---|---|---|
-| **AST Ingestion / Extraction** | **7.71 µs / file** (129,662 files/sec) | ~15.2 ms / file (~65 files/sec) | **1,971× faster** |
-| **Lockfile Merge (`Table::fuse`)** | **0.17 µs / coordinate** | ~180 µs / key (JSON merge) | **1,050× faster** |
-| **Null-Gate Integrity Check** | **1.89 µs / term** (526k checks/sec) | ~45 µs / term (Regex heuristic) | **24× faster (100% caught)** |
-| **Catalog Format Emission** | **0.59 µs / file** (1.69M terms/sec) | ~850 µs / file | **1,440× faster** |
-| **Memory Footprint (RSS)** | **7.4 MB RSS** | 380 – 650 MB (Node V8 heap) | **50× – 80× smaller** |
+| **AST Ingestion / Extraction** | **17.58 µs / file** (56,887 files/sec) | 84.42 µs / file (11,846 files/sec, real `@babel/parser`+`@vue/compiler-sfc`) | **4.8× faster** |
+| **Lockfile Merge (`Table::fuse`)** | **0.307 µs / coordinate** | 3.057 µs / key (real Node.js object-merge) | **10.0× faster** |
+| **Null-Gate Integrity Check** | **2.36 µs / term** (423,511 checks/sec) | 4.242 µs / term (real Node.js regex validator) | **1.8× faster (100% caught)** |
+| **Catalog Format Emission** | **0.349 µs / unit** (2.87M units/sec) | 4.385 µs / unit (real measurement) | **12.6× faster** |
+| **Memory Footprint (RSS)** | **8.3 MB RSS** | 375.0 MB (real `npx lingo.dev@latest --version` peak RSS) | **~45× smaller** |
 | **Git Merge Conflicts** | **0.0% (Commutative Monoid)** | Frequent branch merge failure | **Mathematical guarantee** |
+
+An earlier version of this table (and the README/marketing copy above it) reported a blanket **"2,300× faster"** figure. That number came from comparing Glossa's real latency against an *assumed*, never-measured ~15ms/file incumbent parsing cost — it did not survive being checked against a real `@babel/parser` invocation, which turned out to run in ~84 µs/file, not ~15ms/file. The corrected, real numbers above are 2–3 orders of magnitude more modest — a 4.8×–12.6× speedup depending on subsystem, plus a genuinely large ~45× memory reduction — and every row is independently reproducible via `glossa bench --spbench`.
 
 ---
 

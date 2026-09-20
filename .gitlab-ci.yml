@@ -2,21 +2,169 @@
 stages:
   - test
   - i18n
+  - bisect
+  - benchmark
+
+# Cargo.toml pulls hashtrinity via a relative path dependency
+# (`../fold/hashtrinity`), assuming a sibling checkout that only exists on a
+# dev machine with the full fold workspace cloned. A bare GitLab checkout of
+# just this repo has never had that sibling present, so `cargo test`/`cargo
+# run` have always failed immediately with "No such file or directory" here
+# — before this fix, no push to any branch had ever actually compiled in CI.
+#
+# Cargo.toml's `../fold/hashtrinity` path matches the old fold-monorepo layout,
+# where `fold/hashtrinity/` was the package itself. The standalone extracted
+# `Ptyktos/hashtrinity` repo is a workspace whose real package lives one level
+# deeper, at `hashtrinity/hashtrinity/` (members = ["hashtrinity", ...]) — so
+# clone to a scratch dir and place just the nested package at the exact path
+# Cargo.toml expects, rather than changing that path (which real local dev
+# against the fold monorepo still relies on).
+#
+# This runner persists /builds across job runs (confirmed: git checkout logs
+# "Reinitialized existing Git repository" rather than cloning fresh each
+# time) — only the glossa project's own checkout gets refreshed per job, so
+# anything written to a sibling path by an earlier attempt survives. `rm -rf`
+# the target first so this step is idempotent regardless of prior state.
+#
+# The nested package (hashtrinity/hashtrinity/Cargo.toml) uses
+# `edition.workspace = true` / `license.workspace = true`, inherited from the
+# repo-root workspace manifest's `[workspace.package]`. Cargo's upward
+# workspace-root search walks the literal given path's real ancestors — a
+# symlink at ../fold/hashtrinity pointing elsewhere does NOT work, because
+# Cargo then looks at the symlink's own parent (../fold/) for the workspace
+# root, not the symlink target's real parent. So clone the hashtrinity repo
+# AS ../fold itself: ../fold/hashtrinity/ becomes a real (non-symlinked)
+# subdirectory whose true parent (../fold/) holds the real workspace root.
+#
+# hashtrinity itself depends on other private gitlab.tas.twn.network repos
+# via cargo git dependencies (e.g. lucas/apeiron) that Cargo fetches
+# directly during dependency resolution -- not via the manual git clone
+# above, so CI_JOB_TOKEN must also be wired into git's own credential
+# resolution for the whole host, not just the one hashtrinity clone.
+.fetch_hashtrinity_dependency: &fetch_hashtrinity_dependency
+  - apt-get update -qq && apt-get install -y -qq git ca-certificates
+  - git config --global "url.https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/.insteadOf" "https://${CI_SERVER_HOST}/"
+  - rm -rf "${CI_PROJECT_DIR}/../fold"
+  - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/twn/ptyktos/hashtrinity.git" "${CI_PROJECT_DIR}/../fold"
 
 test:cargo:
   stage: test
-  image: rust:1.80-slim
+  image: rust:latest
+  before_script:
+    - *fetch_hashtrinity_dependency
   script:
     - cargo test --verbose
 
 i18n:check:
   stage: i18n
-  image: rust:1.80-slim
+  image: rust:latest
   variables:
     FAIL_ON_MISSING: "true"
+  before_script:
+    - *fetch_hashtrinity_dependency
   script:
-    - cargo run --release -- check --ci --format=text
+    - cargo run --release --bin glossa -- check --ci --format=text
+    # Regenerate spbench-results.json fresh every run, in the same
+    # environment being tested — it was previously a stale, hand-generated
+    # file committed to the repo and never actually refreshed by CI.
+    - cargo run --release --bin glossa -- bench --spbench --json-output spbench-results.json
   artifacts:
     when: always
     paths:
       - spbench-results.json
+
+# Real KPI benchmark: build the actual release binary once, run it against
+# real cloned repositories (not synthetic fixtures) that already use each
+# named incumbent, and record real wall-clock time, peak RSS, and binary
+# size. This does NOT measure the incumbents' own SaaS-side translation
+# work — that requires a paid account/API token for each of them — only the
+# local, filesystem-side operations (init/extract/check) that are directly
+# comparable.
+# Runs alone in its own stage (not concurrently with benchmark:real-repos)
+# to rule out CI resource contention as an explanation, and measures actual
+# per-file wall-clock time with nanosecond precision instead of a pass/fail
+# timeout -- a boolean threshold can't distinguish "genuinely pathological"
+# from "briefly contended", a precise sorted timing list can.
+benchmark:bisect-postiz-hang:
+  stage: bisect
+  image: rust:latest
+  before_script:
+    - *fetch_hashtrinity_dependency
+  script:
+    - cargo build --release --bin glossa
+    - cp target/release/glossa /usr/local/bin/glossa
+    - rm -rf /tmp/postiz && git clone --depth 1 https://github.com/gitroomhq/postiz-app.git /tmp/postiz
+    - mkdir -p /tmp/bisect-results
+    - |
+      cd /tmp/postiz
+      find . -type f \( -name '*.js' -o -name '*.jsx' -o -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' -o -name '*.cjs' \) -not -path './.git/*' | while read -r f; do
+        rm -rf /tmp/bisect-one && mkdir -p /tmp/bisect-one
+        cp "$f" "/tmp/bisect-one/$(basename "$f")"
+        cd /tmp/bisect-one
+        t0=$(date +%s%N)
+        timeout 20 glossa extract > /dev/null 2>&1
+        rc=$?
+        t1=$(date +%s%N)
+        ms=$(( (t1 - t0) / 1000000 ))
+        echo "${ms}ms rc=${rc} $f" >> /tmp/bisect-results/timings.txt
+        cd /tmp/postiz
+      done
+    - sort -rn /tmp/bisect-results/timings.txt > ./bisect-timings-sorted.txt
+    - echo "=== slowest 30 files (ms, exit code, path) ==="
+    - head -30 ./bisect-timings-sorted.txt
+    - echo "=== summary stats ==="
+    - awk '{print $1+0}' /tmp/bisect-results/timings.txt | sed 's/ms//' > /tmp/ms-only.txt
+    - python3 -c "
+      import sys
+      vals = sorted(int(l.strip()) for l in open('/tmp/ms-only.txt') if l.strip())
+      n = len(vals)
+      print(f'count={n} min={vals[0]}ms max={vals[-1]}ms mean={sum(vals)/n:.1f}ms p50={vals[n//2]}ms p90={vals[int(n*0.9)]}ms p99={vals[int(n*0.99)]}ms')
+      "
+  artifacts:
+    when: always
+    paths:
+      - bisect-timings-sorted.txt
+  allow_failure: true
+
+benchmark:real-repos:
+  stage: benchmark
+  image: rust:latest
+  before_script:
+    - *fetch_hashtrinity_dependency
+    - apt-get install -y -qq time
+  script:
+    - cargo build --release --bin glossa
+    - cp target/release/glossa /usr/local/bin/glossa
+    - ls -la target/release/glossa
+    - mkdir -p /tmp/bench-results
+    - echo "binary_size_bytes=$(stat -c%s target/release/glossa)" > /tmp/bench-results/summary.txt
+    - |
+      for spec in \
+        "gpslogger:https://github.com/mendhak/gpslogger.git:CROWDIN" \
+        "postiz-app:https://github.com/gitroomhq/postiz-app.git:LINGO_DEV" \
+        "AppFlowy:https://github.com/AppFlowy-IO/AppFlowy.git:INLANG" \
+        "SatisfactoryModManager:https://github.com/satisfactorymodding/SatisfactoryModManager.git:TOLGEE" \
+      ; do
+        name="${spec%%:*}"; rest="${spec#*:}"; url="${rest%:*}"; tool="${rest##*:}"
+        echo "=== $name ($tool) ===" | tee -a /tmp/bench-results/summary.txt
+        rm -rf "/tmp/bench-${name}"
+        /usr/bin/time -v git clone --depth 1 "$url" "/tmp/bench-${name}" > "/tmp/bench-results/${name}-clone.log" 2>&1 || echo "clone_failed=true" >> /tmp/bench-results/summary.txt
+        cd "/tmp/bench-${name}" || continue
+        file_count=$(find . -type f -not -path './.git/*' | wc -l)
+        echo "real_file_count=${file_count}" | tee -a /tmp/bench-results/summary.txt
+        /usr/bin/time -v glossa init --format json > "/tmp/bench-results/${name}-init.log" 2>&1
+        /usr/bin/time -v glossa extract --output "/tmp/bench-results/${name}-catalog.json" > "/tmp/bench-results/${name}-extract.log" 2>&1
+        grep -E "Elapsed|Maximum resident" "/tmp/bench-results/${name}-init.log" | sed "s/^/init /" >> /tmp/bench-results/summary.txt
+        grep -E "Elapsed|Maximum resident" "/tmp/bench-results/${name}-extract.log" | sed "s/^/extract /" >> /tmp/bench-results/summary.txt
+        if [ -f "/tmp/bench-results/${name}-catalog.json" ]; then
+          python3 -c "import json; d=json.load(open('/tmp/bench-results/${name}-catalog.json')); print('extracted_units=' + str(len(d) if isinstance(d, list) else len(d.get('items', d))))" >> /tmp/bench-results/summary.txt 2>/dev/null || echo "extracted_units=unknown (non-list catalog shape)" >> /tmp/bench-results/summary.txt
+        fi
+        cd "${CI_PROJECT_DIR}"
+      done
+    - cp -r /tmp/bench-results ./bench-results
+    - cat ./bench-results/summary.txt
+  artifacts:
+    when: always
+    paths:
+      - bench-results/
+  allow_failure: true

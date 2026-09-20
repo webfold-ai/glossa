@@ -1,6 +1,6 @@
 ---
 name: glossa
-description: Universal sovereign multi-framework localization compiler and CI/CD verification engine (2,300x faster, 85%+ cheaper drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin). Automates string extraction across React, Vue, Svelte, Mobile, and Backend, with Zero-Fault Integrity Gate verification, monoidal lockfiles, zero-runtime codegen, and in-context visual editing.
+description: Universal sovereign multi-framework localization compiler and CI/CD verification engine (measured 4.8x-12.6x faster, ~45x lower memory drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin). Automates string extraction across React, Vue, Svelte, Mobile, and Backend, with Zero-Fault Integrity Gate verification, monoidal lockfiles, zero-runtime codegen, and in-context visual editing.
 ---
 
 # Glossa Agent Skill
@@ -47,5 +47,5 @@ glossa extract && glossa check --ci
 
 - **Zero-Fault Integrity Gate**: All translations MUST conserve variable slots (`{user}`, `{{count}}`) and numbered markup tags (`<0>...</0>`). If an LLM drops a placeholder or injects unsafe HTML, the gate rejects the item in 1.8 µs.
 - **Zero Git Merge Conflicts**: `glossa.lock` / `lingo.lock` merges via monoidal commutativity (`Table::fuse`), completely eliminating Git merge conflicts across parallel feature branches.
-- **Content-Addressed Coordinate Caching**: Strings are mapped into deterministic 64-bit coordinates (`ContentCoord`). Moving strings across frameworks or refactoring whitespace retains existing translations with **zero LLM re-spends** (85%+ cost reduction).
+- **Content-Addressed Coordinate Caching**: Strings are mapped into deterministic 64-bit coordinates (`ContentCoord`). Moving strings across frameworks or refactoring whitespace retains existing translations with **zero LLM re-spends** — the dollar savings scale with how much cross-framework duplication a given repo has.
 - **Zero-Regression Proof Suite**: Verified across 61 test suites ensuring 0 false positives in code/CSS/URLs, 100% UI recall, and exact roundtrip serialization.
