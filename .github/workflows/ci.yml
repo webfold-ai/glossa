@@ -40,6 +40,20 @@ jobs:
       - name: cargo build --release
         run: cargo build --release --bin glossa
 
+      - name: SPBench suite — regenerate fresh, in this same environment
+        run: |
+          cargo run --release --bin glossa -- bench --spbench --json-output spbench-results.json | tee spbench-console.txt
+
+      - name: Upload spbench results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spbench-results
+          path: |
+            spbench-results.json
+            spbench-console.txt
+          if-no-files-found: ignore
+
       - name: Real-world performance check — precise per-file timing on postiz-app
         run: |
           cp target/release/glossa /usr/local/bin/glossa
