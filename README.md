@@ -1,5 +1,7 @@
 # Glossa (`glossa`)
 
+Missing translations confuse customers and broken placeholders can break a screen. Glossa finds text across your app and checks translations before they ship.
+
 > **Universal Sovereign Localization Engine & CI/CD Verification Platform.**  
 > 4.8× faster extraction, ~45× lower memory drop-in replacement for [Lingo.dev](https://github.com/lingodotdev/lingo.dev), [Inlang](https://inlang.com), [Tolgee](https://tolgee.io), and [Crowdin](https://crowdin.com).  
 > Built in pure, zero-dependency Rust in the universal cross-framework spirit of **Mitosis**.
