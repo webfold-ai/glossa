@@ -2,43 +2,37 @@ name: Release
 
 on:
   push:
-    branches: [main]
+    branches: [master]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
+  CARETAKERS_BUMP_PACKAGE: glossa
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
-      - name: Run release-plz
-        uses: release-plz/action@v0.5
-        with:
-          command: release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  release-pr:
-    name: Release PR
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: release-plz/action@v0.5
-        with:
-          command: release-pr
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Install caretakers-bump
+        run: cargo install --locked --git https://github.com/Ptyktos/caretakers caretakers-bump
+      - name: Run caretakers-bump plan
+        run: caretakers-bump plan --json --range HEAD > /tmp/plan.json
+      - name: Show plan
+        if: always()
+        run: jq '{current: .current, next: .next, bump: .bump, commits: .commits}' /tmp/plan.json
+      - name: Apply bump
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        run: |
+          git config user.name "caretakers-bump"
+          git config user.email "bump@ptyktos.com"
+          caretakers-bump apply --auto-push
