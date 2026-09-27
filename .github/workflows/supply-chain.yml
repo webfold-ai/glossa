@@ -60,12 +60,12 @@ jobs:
       - name: Install cyclonedx-bom
         run: cargo install --locked cargo-cyclonedx
       - name: Generate CycloneDX SBOM
-        run: cargo cyclonedx --format json --output-filename ptyktos-coding-agent.sbom.json
+        run: cargo cyclonedx --format json --override-filename glossa.sbom.json
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ptyktos-coding-agent-sbom
-          path: ptyktos-coding-agent.sbom.json
+          name: glossa-sbom
+          path: glossa.sbom.json
           retention-days: 90
 
   # caretakers-specific bridge — the cross-repo compliance signal that
@@ -87,10 +87,10 @@ jobs:
             echo "{"
             echo "  \"event\": \"ptyktos.supply_chain.audit\","
             echo "  \"ts\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\","
-            echo "  \"repo\": \"Ptyktos/ptyktos-coding-agent\","
+            echo "  \"repo\": \"Ptyktos/glossa\","
             echo "  \"audit\": \"${{ needs.audit.result }}\","
             echo "  \"deny\": \"${{ needs.deny.result }}\","
-            echo "  \"sbom_path\": \"ptyktos-coding-agent.sbom.json\""
+            echo "  \"sbom_path\": \"glossa.sbom.json\""
             echo "}"
           } > evidence/supply-chain.json
       - uses: actions/upload-artifact@v4
