@@ -342,6 +342,94 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let is_ci =
                 ci || std::env::var("CI").is_ok() || std::env::var("GITHUB_ACTIONS").is_ok();
 
+            // Integrity gate: validate every translation that ALREADY exists.
+            //
+            // Previously `check` only computed missing-translation deltas, yet its
+            // success message claimed the Integrity Gate had run. It had not. The
+            // gate was implemented (engine::gate) and unit-tested, but never
+            // invoked on the command CI actually executes -- so a dropped {slot},
+            // an unbalanced tag, an injected <script> or a glossary violation in a
+            // committed translation passed the gate silently.
+            //
+            // This is the top complaint cluster in the i18n ecosystem:
+            //   lingo.dev #2159 - target-locale plural forms deleted, pluralization
+            //                     silently broken
+            //   lingo.dev #863  - placeholder counts differing between locales render
+            //                     raw template syntax in production
+            //   inlang #3801    - "Users can not use markup placeholders" (112
+            //                     reactions; a commenter calls it "the biggest
+            //                     blocker for us not switching over to paraglide")
+            let glossary = config.glossary.as_ref();
+            let mut violations: Vec<(String, String, String)> = Vec::new(); // (locale, term, reason)
+            let mut validated = 0usize;
+            for entry in lock.entries.values() {
+                for (locale, locale_entry) in &entry.locales {
+                    if let Err(v) = crate::engine::gate::ApeironNullGate::validate_with_glossary(
+                        &entry.canonical_text,
+                        &locale_entry.translated_text,
+                        glossary,
+                    ) {
+                        violations.push((
+                            locale.clone(),
+                            entry.canonical_text.clone(),
+                            v.to_string(),
+                        ));
+                    }
+                    validated += 1;
+                }
+            }
+
+            if !violations.is_empty() {
+                if format == "github" || is_ci {
+                    for (loc, term, reason) in &violations {
+                        println!(
+                            "::error title=Translation Integrity [{loc}]::\"{term}\" -- {reason}"
+                        );
+                    }
+                }
+
+                eprintln!(
+                    "❌ CI Check Failed: {} translation(s) failed the Integrity Gate across {:?}!",
+                    violations.len(),
+                    config.target_locales
+                );
+                for (loc, term, reason) in violations.iter().take(10) {
+                    eprintln!("   - [{loc}] \"{term}\": {reason}");
+                }
+                if violations.len() > 10 {
+                    eprintln!("   ... and {} more", violations.len() - 10);
+                }
+                eprintln!(
+                    "   ({} existing translation(s) validated; {} passed, {} failed)",
+                    validated,
+                    validated - violations.len(),
+                    violations.len()
+                );
+
+                if let Ok(summary_path) = std::env::var("GITHUB_STEP_SUMMARY") {
+                    if let Ok(mut file) = OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(summary_path)
+                    {
+                        let _ = writeln!(file, "## ❌ Glossa CI Check: FAILED");
+                        let _ =
+                            writeln!(file, "| Locale | Term | Violation |\n| :--- | :--- | :--- |");
+                        for (loc, term, reason) in violations.iter().take(25) {
+                            let _ = writeln!(file, "| {loc} | `{term}` | {reason} |");
+                        }
+                        let _ = writeln!(
+                            file,
+                            "\n{} of {} existing translations failed the Integrity Gate.",
+                            violations.len(),
+                            validated
+                        );
+                    }
+                }
+
+                std::process::exit(1);
+            }
+
             if !deltas.is_empty() {
                 if format == "github" || is_ci {
                     for d in &deltas {
@@ -397,11 +485,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
                     .open(summary_path)
                 {
                     let _ = writeln!(file, "## ✅ Glossa / ptyktos-lingo CI Check: PASSED");
-                    let _ = writeln!(file, "100% localization coverage across {:?}. Validated by Zero-Fault Integrity Gate.", config.target_locales);
+                    let _ = writeln!(file, "100% localization coverage across {:?}. {validated} existing translation(s) validated by the Zero-Fault Integrity Gate.", config.target_locales);
                 }
             }
 
-            println!("✅ CI Check Passed: 100% localization coverage verified by Zero-Fault Integrity Gate.");
+            println!("✅ CI Check Passed: 100% localization coverage across {:?}; {validated} existing translation(s) validated by the Zero-Fault Integrity Gate.", config.target_locales);
         }
 
         Commands::Diff => {

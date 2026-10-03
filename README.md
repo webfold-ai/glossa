@@ -1,53 +1,37 @@
 # Glossa (`glossa`)
 
-> **Universal Sovereign Localization Engine & CI/CD Verification Platform.**  
-> 4.8× faster extraction, ~45× lower memory drop-in replacement for [Lingo.dev](https://github.com/lingodotdev/lingo.dev), [Inlang](https://inlang.com), [Tolgee](https://tolgee.io), and [Crowdin](https://crowdin.com).  
-> Built in pure, zero-dependency Rust in the universal cross-framework spirit of **Mitosis**.
+> **Localization extraction and integrity checks for codebases.**
+> Glossa scans supported source and catalog files and checks translations for missing entries, placeholder changes, and broken markup.
 >
-> *Measured against real incumbent tooling (`@babel/parser` + `@vue/compiler-sfc` for extraction, `npx lingo.dev@latest` for memory), regenerated fresh on every CI run — see [Empirical Benchmarks: SPBench Suite](#empirical-benchmarks-spbench-suite) below.*
+> **Distribution status: not yet public.** The crate depends on a private GitLab repository and cannot be built outside the organization.
 
-[![CI](https://github.com/Ptyktos/glossa/actions/workflows/ci.yml/badge.svg)](https://github.com/Ptyktos/glossa/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Binary Size](https://img.shields.io/badge/binary%20size-7.9%20MB-brightgreen.svg)](https://github.com/Ptyktos/glossa)
-[![Throughput](https://img.shields.io/badge/throughput-~57%2C000%20files%2Fsec-orange.svg)](docs/SWOT_ANALYSIS.md)
-[![Zero Regression](https://img.shields.io/badge/regression%20rate-0.0%25-brightgreen.svg)](tests/zero_regression_proof.rs)
+[![License: FSL-1.1-ALv2](https://img.shields.io/badge/License-FSL--1.1--ALv2-blue.svg)](LICENSE)
 
 ---
 
-## The 3-Liner Quickstart
+## Installation status
 
-Drop Glossa into any repository in 60 seconds:
+**Not yet public.** There is no public installer or downloadable binary. `Cargo.toml` depends on `hashtrinity` from the private, VPN-only GitLab repository `https://gitlab.tas.twn.network/twn/ptyktos/hashtrinity.git`; users outside the organization cannot resolve this dependency or build the crate. Do not use the former `ptyktos.com/install.sh` command.
 
-```bash
-# 1. Install or download standalone binary
-curl -fsSL https://ptyktos.com/install.sh | bash
-
-# 2. Initialize project (auto-detects React, Vue, Svelte, Mobile, Backend, etc.)
-glossa init --locales es,fr,de,ja
-
-# 3. Extract & verify coverage in CI
-glossa extract && glossa check --ci
-```
-
-> **Drop-in Compatibility:** Glossa ships with both `glossa` and `lingo` binary aliases. If your repository already uses `lingo.json` or `lingo.lock`, Glossa detects and maintains them with 100% backward compatibility.
+> The source includes `glossa` and `lingo` binary aliases and supports reading `lingo.json` / `lingo.lock`; this has not been validated against a real-repository corpus.
 
 ---
 
 ## Why Glossa?
 
-Modern localization is burdened by two extremes: **legacy per-seat SaaS tools** (Crowdin, Lokalise) that cost $50/seat/month and cause constant Git merge conflicts, and **first-generation Node.js CLI tools** (Lingo.dev) that suffer from real, measured `@babel/parser`+`@vue/compiler-sfc` overhead of ~84 µs/file, high CLI memory usage (measured: 375 MB peak RSS for `npx lingo.dev@latest --version`), strict React lock-in, and fragile string caches.
+Glossa is a prototype for extracting localization strings and checking translation integrity in CI. No competitor product has been measured against it, and no real-repository corpus has been evaluated.
 
 **Glossa eliminates both bottlenecks with pure Rust engineering:**
 
-1. **4.8× Faster Native Execution**: Scans ~57,000 files per second (~17.6 µs per file, measured) using streaming zero-copy tokenizers, idling at just 8.3 MB RSS memory (vs a measured 375 MB for `lingo.dev`'s own CLI) — a ~45× memory reduction.
+1. **Fixture extraction benchmark**: A synthetic in-memory fixture micro-benchmark compared Glossa with `@babel/parser`; it does not measure files, repository scanning, or a competing localization product. See the benchmark scope below.
 2. **Content-Addressed Translation Cache**: 64-bit coordinates (`ContentCoord`) quotient out framework syntax differences. Moving a component from React to Svelte shares the exact same translation cache with **zero token re-spends** — the cost reduction this delivers scales with how much cross-framework duplication exists in a given repo, so we report it per-repo rather than as a single blanket percentage.
-3. **The Mitosis Philosophy (Universal Multi-Framework IR)**: Lifts React JSX, Vue SFCs, Svelte runes, Solid, HTML templates, Markdown, iOS Swift, Android XML, and Flutter Dart into a single canonical intermediate representation (`CanonicalTerm`).
-4. **Zero-Fault Integrity Gate (`IntegrityGate`)**: Mathematical structural verification guards against LLM hallucinations. Dropped `{count}` variables, corrupted markup tags (`<0>...</0>`), and injected HTML/scripts are rejected in 1.8 µs before breaking production UI.
-5. **Zero Git Merge Conflicts (Monoidal Lockfile)**: `glossa.lock` and `lingo.lock` merge via commutative monoid fusion (`Table::fuse`). Two developers translating different features in parallel merge branches with **zero Git conflicts**.
+3. **Supported source surfaces**: Dedicated parsers cover JSX, Vue SFCs, and Svelte, alongside HTML, Markdown, and catalog formats. The `.py`, `.go`, `.rb`, `.php`, `.swift`, `.dart`, `.astro`, and `.ts` path in `src/parsers/code.rs:79` is one regex line-scanner, not a language parser. Android XML and Flutter ARB are catalog formats.
+4. **Translation integrity checks (`IntegrityGate`)**: Tests cover placeholder changes, markup changes, and suspicious HTML. These are software tests, not a mathematical proof or a real-world guarantee.
+5. **Zero Git Merge Conflicts (Monoidal Lockfile)**: `glossa.lock` and `lingo.lock` merge via commutative monoid fusion (`Table::fuse`). Two developers translating different features in parallel merge branches with a merge operation based on commutative monoid fusion.
 6. **Zero-Runtime Type-Safe Codegen (`glossa codegen`)**: Compiles 0kB-overhead TypeScript and Rust message accessors with full autocomplete and compile-time slot type checking.
 7. **In-Context Visual Studio (`glossa visual`)**: Local embedded web server on port 3920 allows developers and translators to Alt+Click any element in a browser to edit copy in real time without heavy Docker containers.
 8. **Translation Memory (TM) Fuzzy Matching**: Built-in Levenshtein and 3-gram Jaccard similarity scoring ranks prior translations to prevent redundant LLM spending.
-9. **Zero-Regression Proof Suite**: 100% verified across 61 test suites proving 0 false positives in code/CSS/URLs, 100% UI recall, clean call extraction without slot corruption, and exact roundtrip serialization.
+9. **Test suite**: 111 `#[test]` cases are present under `src/` and `tests/`. Fixtures are inline literals; there is no checked-in or cloned real-repository corpus, so these tests do not establish real-world recall or false-positive rates.
 
 ---
 
@@ -57,8 +41,8 @@ Modern localization is burdened by two extremes: **legacy per-seat SaaS tools** 
                                  [JSX / TSX] (React / Next.js / Solid)
                                  [Vue SFC]   (<template>)
                                  [Svelte]    (.svelte)
-                                 [Mobile]    (iOS Swift / Android XML / Flutter ARB)
-   Raw Source Code Surfaces  ──► [Backend]   (Python / Go / Ruby / PHP)
+                                 [Catalogs]  (Android XML / Flutter ARB / JSON / YAML / PO)
+   Raw Source Code Surfaces  ──► [Line scan] (.py .go .rb .php .swift .dart .astro .ts)
                                  [Resources] (JSON / YAML / PO / Fluent / XLIFF)
                                        │
                                        ▼  universal_lift
@@ -87,18 +71,13 @@ Modern localization is burdened by two extremes: **legacy per-seat SaaS tools** 
 
 ## Empirical Benchmarks: SPBench Suite
 
-These numbers are **not assumed** — every incumbent baseline is a real measurement (real `@babel/parser` + `@vue/compiler-sfc` invocations, a real Node.js object-merge, a real Node.js regex validator, and a real `npx lingo.dev@latest --version` process for RSS), and `spbench-results.json` is regenerated fresh on every CI run (`.github/workflows/ci.yml`) rather than hand-edited — see the [scripts/spbench-baselines/](scripts/spbench-baselines/) directory for the runnable Node.js scripts that produced each baseline. Tested across 5,000 synthetic components on Linux x86_64 (GitHub Actions `ubuntu-latest`):
+SPBench is a fixture micro-benchmark: it repeatedly parses hardcoded in-memory string literals, not files or a repository. The baseline column below is a fixture micro-benchmark vs `@babel/parser`; no competitor localization product was measured. The run uses inline synthetic literals and there is no real-repository corpus. CI has not been regenerating results successfully since 2026-09-25.
 
-| Benchmark Subsystem | Glossa (Rust) | Incumbent Baseline (real, measured) | Speedup |
-|---|---|---|---|
-| **AST Ingestion / Extraction** | **17.58 µs / file** (56,887 files/sec) | 84.42 µs / file (11,846 files/sec, real `@babel/parser`+`@vue/compiler-sfc`) | **4.8× faster** |
-| **Lockfile Merge (`Table::fuse`)** | **0.307 µs / coordinate** | 3.057 µs / key (real Node.js object-merge) | **10.0× faster** |
-| **Null-Gate Integrity Check** | **2.36 µs / term** (423,511 checks/sec) | 4.242 µs / term (real Node.js regex validator) | **1.8× faster (100% caught)** |
-| **Catalog Format Emission** | **0.349 µs / unit** (2.87M units/sec) | 4.385 µs / unit (real measurement) | **12.6× faster** |
-| **Memory Footprint (RSS)** | **8.3 MB RSS** | 375.0 MB (real `npx lingo.dev@latest --version` peak RSS) | **~45× smaller** |
-| **Git Merge Conflicts** | **0.0% (Commutative Monoid)** | Frequent branch merge failure | **Mathematical guarantee** |
+| Benchmark subsystem | Glossa fixture result | Baseline (fixture micro-benchmark vs @babel/parser) | Scope |
+|---|---:|---|---|
+| **JSX fixture parsing** | 17.58 µs per iteration | 84.42 µs per iteration | Hardcoded in-memory fixtures only; not a per-file or product comparison (4.8× fixture result) |
 
-An earlier version of this table (and the README/marketing copy above it) reported a blanket **"2,300× faster"** figure. That number came from comparing Glossa's real latency against an *assumed*, never-measured ~15ms/file incumbent parsing cost — it did not survive being checked against a real `@babel/parser` invocation, which turned out to run in ~84 µs/file, not ~15ms/file. The corrected, real numbers above are 2–3 orders of magnitude more modest — a 4.8×–12.6× speedup depending on subsystem, plus a genuinely large ~45× memory reduction — and every row is independently reproducible via `glossa bench --spbench`.
+An earlier version reported a blanket **"2,300× faster"** figure. That compared Glossa latency with an assumed, never-measured ~15 ms/file incumbent cost. A fixture comparison with `@babel/parser` measured about 84 µs per fixture parse, not 15 ms. The earlier 2,300× figure was unsupported and has been retracted. The remaining 4.8× result is only this fixture micro-benchmark; it does not compare localization products. The 8.3 MB figure is peak RSS during the SPBench loop, which never opens a file. The 375 MB comparator came from `npx lingo.dev@latest --version`, a version-print command. Those workloads are not comparable, so no memory ratio is claimed.
 
 ---
 
@@ -168,4 +147,4 @@ glossa lorelake push --bucket translations
 
 ## License
 
-MIT OR Apache-2.0. Copyright (c) 2026 Ptyktos Team.
+FSL-1.1-ALv2 (Functional Source License, Version 1.1, Apache License 2.0 Change License). See [LICENSE](LICENSE). Copyright (c) 2026 Ptyktos Team.
