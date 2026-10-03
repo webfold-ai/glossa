@@ -12,7 +12,8 @@ pub fn emit_json(catalog: &BTreeMap<String, String>) -> String {
     for (k, v) in catalog {
         map.insert(k.clone(), serde_json::Value::String(v.clone()));
     }
-    serde_json::to_string_pretty(&serde_json::Value::Object(map)).unwrap_or_else(|_| "{}".to_string())
+    serde_json::to_string_pretty(&serde_json::Value::Object(map))
+        .unwrap_or_else(|_| "{}".to_string())
 }
 
 /// Emits translations as standard YAML.
@@ -43,7 +44,9 @@ pub fn emit_android_xml(catalog: &BTreeMap<String, String>) -> String {
             .replace('>', "&gt;")
             .replace('\'', "\\'")
             .replace('"', "\\\"");
-        out.push_str(&format!("    <string name=\"{safe_name}\">{escaped_val}</string>\n"));
+        out.push_str(&format!(
+            "    <string name=\"{safe_name}\">{escaped_val}</string>\n"
+        ));
     }
     out.push_str("</resources>\n");
     out
@@ -57,7 +60,10 @@ pub fn emit_ios_strings(catalog: &BTreeMap<String, String>) -> String {
         let escaped_k = k.replace('\\', "\\\\").replace('"', "\\\"");
         // Re-convert {var} or {name} back to %@ for iOS format strings
         let ios_val = convert_slots_to_ios(v);
-        let escaped_v = ios_val.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n");
+        let escaped_v = ios_val
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"")
+            .replace('\n', "\\n");
         out.push_str(&format!("\"{escaped_k}\" = \"{escaped_v}\";\n"));
     }
     out
@@ -66,12 +72,16 @@ pub fn emit_ios_strings(catalog: &BTreeMap<String, String>) -> String {
 /// Emits translations as Flutter ARB file (`intl_{locale}.arb`).
 pub fn emit_flutter_arb(catalog: &BTreeMap<String, String>, locale: &str) -> String {
     let mut map = serde_json::Map::new();
-    map.insert("@@locale".to_string(), serde_json::Value::String(locale.to_string()));
+    map.insert(
+        "@@locale".to_string(),
+        serde_json::Value::String(locale.to_string()),
+    );
     for (k, v) in catalog {
         let safe_key = sanitize_camel_case(k);
         map.insert(safe_key, serde_json::Value::String(v.clone()));
     }
-    serde_json::to_string_pretty(&serde_json::Value::Object(map)).unwrap_or_else(|_| "{}".to_string())
+    serde_json::to_string_pretty(&serde_json::Value::Object(map))
+        .unwrap_or_else(|_| "{}".to_string())
 }
 
 /// Emits translations as Java / Kotlin `.properties` file.
@@ -86,7 +96,11 @@ pub fn emit_properties(catalog: &BTreeMap<String, String>) -> String {
 }
 
 /// Emits translations as standard XLIFF 1.2 XML file.
-pub fn emit_xliff(catalog: &BTreeMap<String, String>, source_locale: &str, target_locale: &str) -> String {
+pub fn emit_xliff(
+    catalog: &BTreeMap<String, String>,
+    source_locale: &str,
+    target_locale: &str,
+) -> String {
     let mut out = String::new();
     out.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     out.push_str(&format!(
@@ -146,7 +160,13 @@ pub fn emit_fluent(catalog: &BTreeMap<String, String>) -> String {
     for (k, v) in catalog {
         let safe_key = k
             .chars()
-            .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+            .map(|c| {
+                if c.is_alphanumeric() || c == '-' || c == '_' {
+                    c
+                } else {
+                    '_'
+                }
+            })
             .collect::<String>();
         let fluent_val = convert_slots_to_fluent(v);
         out.push_str(&format!("{safe_key} = {fluent_val}\n"));
@@ -155,7 +175,9 @@ pub fn emit_fluent(catalog: &BTreeMap<String, String>) -> String {
 }
 
 fn escape_po_string(s: &str) -> String {
-    s.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n")
+    s.replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
 }
 
 fn convert_slots_to_fluent(s: &str) -> String {
@@ -228,7 +250,11 @@ fn sanitize_camel_case(s: &str) -> String {
             cap_next = true;
         }
     }
-    if res.is_empty() { "msg".to_string() } else { res }
+    if res.is_empty() {
+        "msg".to_string()
+    } else {
+        res
+    }
 }
 
 #[cfg(test)]

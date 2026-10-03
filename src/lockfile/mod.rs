@@ -97,7 +97,7 @@ impl LingoLock {
         let path = path.as_ref();
         let serialized = serde_json::to_string_pretty(self)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
-        
+
         // Write to temporary file and rename for atomic persistence
         let tmp_path = format!("{}.tmp", path.to_string_lossy());
         fs::write(&tmp_path, serialized)?;

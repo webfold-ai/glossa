@@ -189,7 +189,9 @@ def user_view(request):
 "#;
         let items = extract_code_strings(py_code, "views.py");
         assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|i| i.canonical_text == "Welcome to our service, {user}!"));
+        assert!(items
+            .iter()
+            .any(|i| i.canonical_text == "Welcome to our service, {user}!"));
         assert!(items.iter().any(|i| i.canonical_text == "Submit Form"));
     }
 
@@ -206,7 +208,9 @@ func main() {
 "#;
         let items = extract_code_strings(go_code, "main.go");
         assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|i| i.canonical_text == "Project Dashboard"));
+        assert!(items
+            .iter()
+            .any(|i| i.canonical_text == "Project Dashboard"));
     }
 
     #[test]
@@ -221,7 +225,9 @@ end
 "#;
         let items = extract_code_strings(rb_code, "users_controller.rb");
         assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|i| i.canonical_text == "User was successfully created."));
+        assert!(items
+            .iter()
+            .any(|i| i.canonical_text == "User was successfully created."));
     }
 
     #[test]
@@ -233,7 +239,9 @@ echo trans('messages.greeting');
 "#;
         let items = extract_code_strings(php_code, "index.php");
         assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|i| i.canonical_text == "Welcome to our application"));
+        assert!(items
+            .iter()
+            .any(|i| i.canonical_text == "Welcome to our application"));
     }
 
     #[test]
@@ -244,7 +252,9 @@ let buttonLabel = String(localized: "Try Again")
 "#;
         let items = extract_code_strings(swift_code, "LoginViewController.swift");
         assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|i| i.canonical_text == "Invalid Credentials"));
+        assert!(items
+            .iter()
+            .any(|i| i.canonical_text == "Invalid Credentials"));
         assert!(items.iter().any(|i| i.canonical_text == "Try Again"));
     }
 
@@ -257,6 +267,8 @@ const greeting = $localize`Hello guest`;
         let items = extract_code_strings(ts_code, "app.component.ts");
         assert_eq!(items.len(), 2);
         assert!(items.iter().any(|i| i.key.as_deref() == Some("home.title")));
-        assert!(items.iter().any(|i| i.canonical_text == "Welcome to Angular!"));
+        assert!(items
+            .iter()
+            .any(|i| i.canonical_text == "Welcome to Angular!"));
     }
 }

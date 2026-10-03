@@ -75,7 +75,10 @@ pub fn extract_jsonl(source: &str, file_path: &str) -> Vec<ExtractedItem> {
                     let coord = ApeironCoord::from_str_canonical(&canon);
                     items.push(ExtractedItem {
                         coord,
-                        key: map.get("key").and_then(|k| k.as_str()).map(|k| k.to_string()),
+                        key: map
+                            .get("key")
+                            .and_then(|k| k.as_str())
+                            .map(|k| k.to_string()),
                         terms: parsed_terms,
                         canonical_text: canon,
                         context: Some(format!("JSONL in {file_path}:{}", line_idx + 1)),
@@ -161,7 +164,11 @@ pub fn extract_yaml(source: &str, file_path: &str) -> Vec<ExtractedItem> {
                     let full_key = if stack.is_empty() {
                         key.to_string()
                     } else {
-                        let prefix = stack.iter().map(|(_, s)| s.as_str()).collect::<Vec<_>>().join(".");
+                        let prefix = stack
+                            .iter()
+                            .map(|(_, s)| s.as_str())
+                            .collect::<Vec<_>>()
+                            .join(".");
                         format!("{prefix}.{key}")
                     };
 
@@ -220,7 +227,10 @@ fn decode_xml_entities(input: &str) -> String {
                     "quot" => Some('"'),
                     "apos" => Some('\''),
                     _ if entity.starts_with('#') => {
-                        let code = if let Some(hex) = entity[1..].strip_prefix('x').or_else(|| entity[1..].strip_prefix('X')) {
+                        let code = if let Some(hex) = entity[1..]
+                            .strip_prefix('x')
+                            .or_else(|| entity[1..].strip_prefix('X'))
+                        {
                             u32::from_str_radix(hex, 16).ok()
                         } else {
                             entity[1..].parse::<u32>().ok()
@@ -266,7 +276,11 @@ pub fn extract_android_xml(source: &str, file_path: &str) -> Vec<ExtractedItem> 
                 // trailing non-breaking space (&#160; -> U+00A0) that was
                 // meaningful decoded content, not source formatting.
                 let clean_content = decode_xml_entities(
-                    &content.trim().replace("\\'", "'").replace("\\\"", "\"").replace("\\n", "\n"),
+                    &content
+                        .trim()
+                        .replace("\\'", "'")
+                        .replace("\\\"", "\"")
+                        .replace("\\n", "\n"),
                 );
 
                 if !clean_content.is_empty() {
@@ -405,7 +419,10 @@ pub fn extract_xliff(source: &str, file_path: &str) -> Vec<ExtractedItem> {
         let actual_start = cursor + unit_start;
         if let Some(unit_end) = source[actual_start..].find("</trans-unit>") {
             let unit_block = &source[actual_start..actual_start + unit_end + 13];
-            let id = extract_attribute(&unit_block[..unit_block.find('>').unwrap_or(unit_block.len())], "id");
+            let id = extract_attribute(
+                &unit_block[..unit_block.find('>').unwrap_or(unit_block.len())],
+                "id",
+            );
 
             if let Some(src_start) = unit_block.find("<source>") {
                 let content_start = src_start + 8;
@@ -445,7 +462,9 @@ pub fn extract_csv(source: &str, file_path: &str) -> Vec<ExtractedItem> {
 
     for (idx, line) in source.lines().enumerate() {
         let trimmed = line.trim();
-        if trimmed.is_empty() || (idx == 0 && (trimmed.starts_with("key,") || trimmed.starts_with("id,"))) {
+        if trimmed.is_empty()
+            || (idx == 0 && (trimmed.starts_with("key,") || trimmed.starts_with("id,")))
+        {
             continue;
         }
 
@@ -505,14 +524,26 @@ pub fn extract_po(source: &str, file_path: &str) -> Vec<ExtractedItem> {
 
         if trimmed.starts_with("msgctxt ") {
             if !current_msgid.is_empty() {
-                flush_po_item(&mut items, &current_msgid, current_msgctxt.as_deref(), file_path, line_num);
+                flush_po_item(
+                    &mut items,
+                    &current_msgid,
+                    current_msgctxt.as_deref(),
+                    file_path,
+                    line_num,
+                );
                 current_msgid.clear();
             }
             current_msgctxt = extract_quoted_string(trimmed);
             reading_msgid = false;
         } else if trimmed.starts_with("msgid ") {
             if !current_msgid.is_empty() {
-                flush_po_item(&mut items, &current_msgid, current_msgctxt.as_deref(), file_path, line_num);
+                flush_po_item(
+                    &mut items,
+                    &current_msgid,
+                    current_msgctxt.as_deref(),
+                    file_path,
+                    line_num,
+                );
                 current_msgid.clear();
             }
             line_num = idx + 1;
@@ -530,7 +561,13 @@ pub fn extract_po(source: &str, file_path: &str) -> Vec<ExtractedItem> {
     }
 
     if !current_msgid.is_empty() {
-        flush_po_item(&mut items, &current_msgid, current_msgctxt.as_deref(), file_path, line_num);
+        flush_po_item(
+            &mut items,
+            &current_msgid,
+            current_msgctxt.as_deref(),
+            file_path,
+            line_num,
+        );
     }
 
     items
@@ -554,7 +591,9 @@ fn flush_po_item(
         key: Some(msgid.to_string()),
         terms: parsed_terms,
         canonical_text: canon,
-        context: context.map(|c| c.to_string()).or_else(|| Some(format!("PO in {file_path}:{line_num}"))),
+        context: context
+            .map(|c| c.to_string())
+            .or_else(|| Some(format!("PO in {file_path}:{line_num}"))),
         locations: vec![SourceLocation {
             file_path: file_path.to_string(),
             line: line_num,
@@ -634,7 +673,11 @@ pub fn parse_interpolated_string(s: &str) -> Vec<ApeironTerm> {
             let trimmed = name.trim();
             terms.push(ApeironTerm::Slot {
                 id: slot_id,
-                name: if trimmed.is_empty() { format!("var{slot_id}") } else { trimmed.to_string() },
+                name: if trimmed.is_empty() {
+                    format!("var{slot_id}")
+                } else {
+                    trimmed.to_string()
+                },
                 raw_expr: Some(trimmed.to_string()),
             });
             slot_id += 1;
@@ -659,7 +702,11 @@ pub fn parse_interpolated_string(s: &str) -> Vec<ApeironTerm> {
             let trimmed = name.trim();
             terms.push(ApeironTerm::Slot {
                 id: slot_id,
-                name: if trimmed.is_empty() { format!("var{slot_id}") } else { trimmed.to_string() },
+                name: if trimmed.is_empty() {
+                    format!("var{slot_id}")
+                } else {
+                    trimmed.to_string()
+                },
                 raw_expr: Some(trimmed.to_string()),
             });
             slot_id += 1;
@@ -681,7 +728,9 @@ pub fn parse_interpolated_string(s: &str) -> Vec<ApeironTerm> {
         if chars[i] == '@' && i + 1 < chars.len() && chars[i + 1] == ':' {
             let ident_start = i + 2;
             let mut j = ident_start;
-            while j < chars.len() && (chars[j].is_alphanumeric() || chars[j] == '_' || chars[j] == '.') {
+            while j < chars.len()
+                && (chars[j].is_alphanumeric() || chars[j] == '_' || chars[j] == '.')
+            {
                 j += 1;
             }
             if j > ident_start {
@@ -749,7 +798,9 @@ app:
         let items = extract_yaml(yaml, "locales/en.yml");
         assert_eq!(items.len(), 3);
         assert!(items.iter().any(|i| i.key.as_deref() == Some("app.title")));
-        assert!(items.iter().any(|i| i.canonical_text == "Dashboard Overview"));
+        assert!(items
+            .iter()
+            .any(|i| i.canonical_text == "Dashboard Overview"));
     }
 
     #[test]
@@ -763,7 +814,9 @@ app:
         let items = extract_android_xml(xml, "values/strings.xml");
         assert_eq!(items.len(), 2);
         assert!(items.iter().any(|i| i.key.as_deref() == Some("app_name")));
-        assert!(items.iter().any(|i| i.canonical_text == "Welcome back, {user}!"));
+        assert!(items
+            .iter()
+            .any(|i| i.canonical_text == "Welcome back, {user}!"));
     }
 
     #[test]
@@ -775,8 +828,12 @@ app:
 "#;
         let items = extract_ios_strings(strings, "Localizable.strings");
         assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|i| i.key.as_deref() == Some("login_button")));
-        assert!(items.iter().any(|i| i.canonical_text == "You have {var} new messages"));
+        assert!(items
+            .iter()
+            .any(|i| i.key.as_deref() == Some("login_button")));
+        assert!(items
+            .iter()
+            .any(|i| i.canonical_text == "You have {var} new messages"));
     }
 
     #[test]
@@ -791,7 +848,9 @@ app:
         let items = extract_flutter_arb(arb, "intl_en.arb");
         assert_eq!(items.len(), 2);
         assert!(items.iter().any(|i| i.canonical_text == "Hello World!"));
-        assert!(items.iter().any(|i| i.canonical_text == "Welcome, {username}!"));
+        assert!(items
+            .iter()
+            .any(|i| i.canonical_text == "Welcome, {username}!"));
     }
 
     #[test]
@@ -803,7 +862,9 @@ prompt.success: Operation succeeded!
 "#;
         let items = extract_properties(prop, "messages.properties");
         assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|i| i.canonical_text == "Please try again later."));
+        assert!(items
+            .iter()
+            .any(|i| i.canonical_text == "Please try again later."));
     }
 
     #[test]
@@ -830,6 +891,8 @@ prompt.success: Operation succeeded!
         let csv = "key,text\nwelcome,Welcome to our website\nbye,Goodbye!\n";
         let items = extract_csv(csv, "catalog.csv");
         assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|i| i.canonical_text == "Welcome to our website"));
+        assert!(items
+            .iter()
+            .any(|i| i.canonical_text == "Welcome to our website"));
     }
 }

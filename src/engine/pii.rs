@@ -9,21 +9,18 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-static EMAIL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+").unwrap()
-});
+static EMAIL_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+").unwrap());
 
-static IPV4_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\b(?:\d{1,3}\.){3}\d{1,3}\b").unwrap()
-});
+static IPV4_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\b(?:\d{1,3}\.){3}\d{1,3}\b").unwrap());
 
 static PHONE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b").unwrap()
 });
 
-static CREDIT_CARD_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\b(?:\d{4}[-\s]?){3}\d{4}\b").unwrap()
-});
+static CREDIT_CARD_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\b(?:\d{4}[-\s]?){3}\d{4}\b").unwrap());
 
 /// Context holding the redaction mappings for a single translation unit or batch.
 #[derive(Debug, Default, Clone)]

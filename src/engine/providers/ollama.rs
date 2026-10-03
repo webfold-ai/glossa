@@ -88,8 +88,9 @@ impl super::super::TranslationProvider for OllamaProvider {
             .await
             .map_err(|e| super::super::EngineError::Json(e.to_string()))?;
 
-        let parsed: JsonOutput = serde_json::from_str(&body.response)
-            .map_err(|e| super::super::EngineError::Json(format!("Failed to parse Ollama JSON: {e}")))?;
+        let parsed: JsonOutput = serde_json::from_str(&body.response).map_err(|e| {
+            super::super::EngineError::Json(format!("Failed to parse Ollama JSON: {e}"))
+        })?;
 
         Ok(parsed.translations)
     }

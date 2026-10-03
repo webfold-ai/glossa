@@ -64,8 +64,15 @@ fn test_ci_runner_failure_on_missing_translations() {
         .expect("Failed to run lingo check in CI mode");
 
     // CI MUST fail because translations are missing!
-    assert!(!check_output.status.success(), "CI check must fail with non-zero exit code when translations are missing");
-    assert_eq!(check_output.status.code(), Some(1), "CI check must return exit code 1");
+    assert!(
+        !check_output.status.success(),
+        "CI check must fail with non-zero exit code when translations are missing"
+    );
+    assert_eq!(
+        check_output.status.code(),
+        Some(1),
+        "CI check must return exit code 1"
+    );
 
     // Verify GitHub Workflow Annotation output
     let stdout = String::from_utf8_lossy(&check_output.stdout);
@@ -75,7 +82,10 @@ fn test_ci_runner_failure_on_missing_translations() {
     );
 
     // Verify GITHUB_STEP_SUMMARY markdown was written
-    assert!(summary_file.exists(), "GITHUB_STEP_SUMMARY file must be created");
+    assert!(
+        summary_file.exists(),
+        "GITHUB_STEP_SUMMARY file must be created"
+    );
     let summary_md = fs::read_to_string(&summary_file).unwrap();
     assert!(summary_md.contains("ptyktos-lingo CI Check: FAILED"));
     assert!(summary_md.contains("Missing Items"));
@@ -141,7 +151,10 @@ fn test_ci_runner_success_on_complete_translations() {
         .output()
         .unwrap();
 
-    assert!(check_output.status.success(), "CI check must pass with exit code 0 when coverage is complete");
+    assert!(
+        check_output.status.success(),
+        "CI check must pass with exit code 0 when coverage is complete"
+    );
 
     let summary_md = fs::read_to_string(&summary_file).unwrap();
     assert!(summary_md.contains("ptyktos-lingo CI Check: PASSED"));

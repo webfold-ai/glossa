@@ -54,7 +54,10 @@ impl super::super::TranslationProvider for PtyktosApiProvider {
             req = req.header("Authorization", format!("Bearer {key}"));
         }
 
-        let resp = req.send().await.map_err(|e| super::super::EngineError::Http(e.to_string()))?;
+        let resp = req
+            .send()
+            .await
+            .map_err(|e| super::super::EngineError::Http(e.to_string()))?;
         if !resp.status().is_success() {
             return Err(super::super::EngineError::Api(format!(
                 "Ptyktos API returned HTTP {}",

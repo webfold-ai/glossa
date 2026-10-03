@@ -64,7 +64,12 @@ impl TranslationMemory {
     }
 
     /// Find the best matching candidate for a given source string in a target locale.
-    pub fn find_best_match(&self, locale: &str, query: &str, min_similarity: f64) -> Option<TmCandidate> {
+    pub fn find_best_match(
+        &self,
+        locale: &str,
+        query: &str,
+        min_similarity: f64,
+    ) -> Option<TmCandidate> {
         let loc_map = self.entries.get(locale)?;
         let mut best_score = 0.0;
         let mut best_entry = None;
@@ -110,7 +115,11 @@ impl TranslationMemory {
             }
         }
 
-        candidates.sort_by(|a, b| b.similarity_score.partial_cmp(&a.similarity_score).unwrap_or(std::cmp::Ordering::Equal));
+        candidates.sort_by(|a, b| {
+            b.similarity_score
+                .partial_cmp(&a.similarity_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         candidates.truncate(top_k);
         candidates
     }
@@ -238,7 +247,9 @@ mod tests {
         );
 
         let query = "Please confirm your email before submitting.";
-        let candidate = tm.find_best_match("es", query, 0.7).expect("Must find fuzzy match");
+        let candidate = tm
+            .find_best_match("es", query, 0.7)
+            .expect("Must find fuzzy match");
         assert!(candidate.similarity_score > 0.70);
         assert!(candidate.translated_text.contains("confirme su contraseña"));
     }

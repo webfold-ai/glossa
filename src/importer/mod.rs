@@ -231,7 +231,11 @@ fn parse_lingo_dev_i18n_json(path: &Path) -> (Option<String>, Vec<String>, Optio
             let targets = locale
                 .and_then(|l| l.get("targets"))
                 .and_then(|a| a.as_array())
-                .map(|arr| arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                        .collect()
+                })
                 .unwrap_or_default();
             let fmt = v
                 .get("buckets")
@@ -247,12 +251,23 @@ fn parse_lingo_dev_i18n_json(path: &Path) -> (Option<String>, Vec<String>, Optio
 fn parse_lingo_json(path: &Path) -> (Option<String>, Vec<String>, Option<String>) {
     if let Ok(content) = fs::read_to_string(path) {
         if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content) {
-            let src = v.get("sourceLocale").and_then(|s| s.as_str()).map(|s| s.to_string());
-            let targets = v.get("targetLocales")
+            let src = v
+                .get("sourceLocale")
+                .and_then(|s| s.as_str())
+                .map(|s| s.to_string());
+            let targets = v
+                .get("targetLocales")
                 .and_then(|a| a.as_array())
-                .map(|arr| arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                        .collect()
+                })
                 .unwrap_or_default();
-            let fmt = v.get("format").and_then(|s| s.as_str()).map(|s| s.to_string());
+            let fmt = v
+                .get("format")
+                .and_then(|s| s.as_str())
+                .map(|s| s.to_string());
             return (src, targets, fmt);
         }
     }
@@ -339,7 +354,11 @@ fn parse_tolgeerc_patterns(path: &Path) -> Vec<String> {
             return v
                 .get("patterns")
                 .and_then(|a| a.as_array())
-                .map(|arr| arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                        .collect()
+                })
                 .unwrap_or_default();
         }
     }
@@ -404,10 +423,22 @@ mod tests {
         fs::write(root.join("i18n.json"), i18n_json).unwrap();
 
         let imports = detect_incumbent_systems(root);
-        assert_eq!(imports.len(), 1, "must detect exactly one system, not double-count via the i18next fallback");
-        assert_eq!(imports[0].system, IncumbentSystem::LingoDev, "real i18n.json must classify as LingoDev, not I18next");
+        assert_eq!(
+            imports.len(),
+            1,
+            "must detect exactly one system, not double-count via the i18next fallback"
+        );
+        assert_eq!(
+            imports[0].system,
+            IncumbentSystem::LingoDev,
+            "real i18n.json must classify as LingoDev, not I18next"
+        );
         assert_eq!(imports[0].source_locale.as_deref(), Some("en"));
-        assert_eq!(imports[0].target_locales.len(), 14, "must read the real 14-locale target list, not default to empty");
+        assert_eq!(
+            imports[0].target_locales.len(),
+            14,
+            "must read the real 14-locale target list, not default to empty"
+        );
         assert!(imports[0].target_locales.contains(&"ja".to_string()));
         assert_eq!(imports[0].format.as_deref(), Some("json"));
     }
@@ -443,10 +474,17 @@ mod tests {
         let imports = detect_incumbent_systems(root);
         assert_eq!(imports.len(), 1);
         assert_eq!(imports[0].system, IncumbentSystem::LingoDev);
-        assert_eq!(imports[0].source_locale.as_deref(), Some("en-US"), "region-tagged source locale must survive intact");
+        assert_eq!(
+            imports[0].source_locale.as_deref(),
+            Some("en-US"),
+            "region-tagged source locale must survive intact"
+        );
         assert_eq!(imports[0].target_locales.len(), 14);
         assert!(imports[0].target_locales.contains(&"pt-BR".to_string()));
-        assert!(imports[0].target_locales.contains(&"pt-PT".to_string()), "two distinct Portuguese variants must both be kept, not deduped");
+        assert!(
+            imports[0].target_locales.contains(&"pt-PT".to_string()),
+            "two distinct Portuguese variants must both be kept, not deduped"
+        );
     }
 
     /// `i18n.json` takes priority over legacy `lingo.json` when both exist,
@@ -492,7 +530,11 @@ mod tests {
         fs::write(root.join(".tolgeerc.json"), tolgeerc).unwrap();
 
         let imports = detect_incumbent_systems(root);
-        assert_eq!(imports.len(), 1, "must detect Tolgee from the real .tolgeerc.json filename");
+        assert_eq!(
+            imports.len(),
+            1,
+            "must detect Tolgee from the real .tolgeerc.json filename"
+        );
         assert_eq!(imports[0].system, IncumbentSystem::Tolgee);
         assert_eq!(
             imports[0].include_patterns,
@@ -538,7 +580,10 @@ mod tests {
         let imports = detect_incumbent_systems(root);
         assert_eq!(imports.len(), 1);
         assert_eq!(imports[0].system, IncumbentSystem::Tolgee);
-        assert!(imports[0].include_patterns.is_empty(), "no `patterns` field in this real shape — must be empty, not a parse error");
+        assert!(
+            imports[0].include_patterns.is_empty(),
+            "no `patterns` field in this real shape — must be empty, not a parse error"
+        );
     }
 
     /// Real fixture: `liquidinvestigations/hoover-ui`'s `.tolgeerc` — the
@@ -568,7 +613,10 @@ mod tests {
 
         let imports = detect_incumbent_systems(root);
         assert_eq!(imports.len(), 1);
-        assert_eq!(imports[0].include_patterns, vec!["/src/translations/strawberry_en_US.ts"]);
+        assert_eq!(
+            imports[0].include_patterns,
+            vec!["/src/translations/strawberry_en_US.ts"]
+        );
     }
 
     /// Real fixture: `microsoft/samples-for-ai`'s crowdin.yml — the most
@@ -659,7 +707,10 @@ files:
         let imports = detect_incumbent_systems(root);
         assert_eq!(imports.len(), 1);
         assert_eq!(imports[0].system, IncumbentSystem::Crowdin);
-        assert_eq!(imports[0].include_patterns, vec!["/gpslogger/src/main/res/values/strings.xml"]);
+        assert_eq!(
+            imports[0].include_patterns,
+            vec!["/gpslogger/src/main/res/values/strings.xml"]
+        );
     }
 
     #[test]
@@ -709,8 +760,16 @@ files:
         let imports = detect_incumbent_systems(root);
         assert_eq!(imports.len(), 1);
         assert_eq!(imports[0].system, IncumbentSystem::Inlang);
-        assert_eq!(imports[0].source_locale.as_deref(), Some("en"), "must read baseLocale when sourceLanguageTag is absent");
-        assert_eq!(imports[0].target_locales.len(), 14, "15 total locales minus the source itself");
+        assert_eq!(
+            imports[0].source_locale.as_deref(),
+            Some("en"),
+            "must read baseLocale when sourceLanguageTag is absent"
+        );
+        assert_eq!(
+            imports[0].target_locales.len(),
+            14,
+            "15 total locales minus the source itself"
+        );
         assert!(imports[0].target_locales.contains(&"zh-Hans".to_string()));
     }
 
@@ -768,8 +827,15 @@ files:
         assert_eq!(imports.len(), 1);
         assert_eq!(imports[0].system, IncumbentSystem::Inlang);
         assert_eq!(imports[0].source_locale.as_deref(), Some("en-US"));
-        assert_eq!(imports[0].target_locales.len(), 30, "31 total tags minus the source itself");
+        assert_eq!(
+            imports[0].target_locales.len(),
+            30,
+            "31 total tags minus the source itself"
+        );
         assert!(imports[0].target_locales.contains(&"zh-CN".to_string()));
-        assert!(!imports[0].target_locales.contains(&"en-US".to_string()), "source tag must be filtered out of targets");
+        assert!(
+            !imports[0].target_locales.contains(&"en-US".to_string()),
+            "source tag must be filtered out of targets"
+        );
     }
 }

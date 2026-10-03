@@ -67,7 +67,12 @@ fn handle_connection(stream: &mut TcpStream, lock_path: &Path) {
     if path == "/" || path == "/index.html" {
         send_response(stream, "200 OK", "text/html", DASHBOARD_HTML);
     } else if path == "/glossa.js" {
-        send_response(stream, "200 OK", "application/javascript", IN_CONTEXT_SCRIPT);
+        send_response(
+            stream,
+            "200 OK",
+            "application/javascript",
+            IN_CONTEXT_SCRIPT,
+        );
     } else if path == "/api/translations" && method == "GET" {
         let lock = LingoLock::load_from_file(lock_path).unwrap_or_default();
         let json = serde_json::to_string(&lock.entries).unwrap_or_default();

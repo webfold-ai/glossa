@@ -133,8 +133,14 @@ async fn handle_mcp_request(req: &McpRequest, engine: &TranslationEngine) -> Mcp
         },
         "tools/call" => {
             let params = req.params.as_ref();
-            let name = params.and_then(|p| p.get("name")).and_then(|v| v.as_str()).unwrap_or_default();
-            let args = params.and_then(|p| p.get("arguments")).cloned().unwrap_or(json!({}));
+            let name = params
+                .and_then(|p| p.get("name"))
+                .and_then(|v| v.as_str())
+                .unwrap_or_default();
+            let args = params
+                .and_then(|p| p.get("arguments"))
+                .cloned()
+                .unwrap_or(json!({}));
 
             let result = handle_tool_call(name, &args, engine).await;
             match result {
@@ -161,12 +167,22 @@ async fn handle_mcp_request(req: &McpRequest, engine: &TranslationEngine) -> Mcp
     }
 }
 
-async fn handle_tool_call(name: &str, args: &Value, engine: &TranslationEngine) -> Result<String, String> {
+async fn handle_tool_call(
+    name: &str,
+    args: &Value,
+    engine: &TranslationEngine,
+) -> Result<String, String> {
     match name {
         "extract_strings" => {
-            let code = args.get("code").and_then(|v| v.as_str()).ok_or("Missing 'code'")?;
+            let code = args
+                .get("code")
+                .and_then(|v| v.as_str())
+                .ok_or("Missing 'code'")?;
             let fmt_str = args.get("format").and_then(|v| v.as_str()).unwrap_or("jsx");
-            let file_path = args.get("file_path").and_then(|v| v.as_str()).unwrap_or("inline");
+            let file_path = args
+                .get("file_path")
+                .and_then(|v| v.as_str())
+                .unwrap_or("inline");
 
             let format = match fmt_str {
                 "jsx" | "tsx" => SourceFormat::Jsx,
@@ -194,8 +210,14 @@ async fn handle_tool_call(name: &str, args: &Value, engine: &TranslationEngine) 
             Ok(serde_json::to_string_pretty(&summary).unwrap_or_default())
         }
         "translate_string" => {
-            let text = args.get("text").and_then(|v| v.as_str()).ok_or("Missing 'text'")?;
-            let target_locale = args.get("target_locale").and_then(|v| v.as_str()).ok_or("Missing 'target_locale'")?;
+            let text = args
+                .get("text")
+                .and_then(|v| v.as_str())
+                .ok_or("Missing 'text'")?;
+            let target_locale = args
+                .get("target_locale")
+                .and_then(|v| v.as_str())
+                .ok_or("Missing 'target_locale'")?;
 
             let res = engine
                 .translate_and_verify(&[text.to_string()], target_locale)
@@ -206,9 +228,18 @@ async fn handle_tool_call(name: &str, args: &Value, engine: &TranslationEngine) 
             Ok(json!({ "translated": translated }).to_string())
         }
         "compile_component" => {
-            let key = args.get("key").and_then(|v| v.as_str()).ok_or("Missing 'key'")?;
-            let text = args.get("text").and_then(|v| v.as_str()).ok_or("Missing 'text'")?;
-            let framework_str = args.get("target_framework").and_then(|v| v.as_str()).unwrap_or("react");
+            let key = args
+                .get("key")
+                .and_then(|v| v.as_str())
+                .ok_or("Missing 'key'")?;
+            let text = args
+                .get("text")
+                .and_then(|v| v.as_str())
+                .ok_or("Missing 'text'")?;
+            let framework_str = args
+                .get("target_framework")
+                .and_then(|v| v.as_str())
+                .unwrap_or("react");
 
             let target = TargetFramework::parse(framework_str).unwrap_or(TargetFramework::React);
             let parsed_terms = crate::parsers::resource::parse_interpolated_string(text);
@@ -230,7 +261,8 @@ async fn handle_tool_call(name: &str, args: &Value, engine: &TranslationEngine) 
                 "pending_translations": deltas.len(),
                 "provider": config.provider,
                 "lockfile_version": lock.version
-            }).to_string())
+            })
+            .to_string())
         }
         _ => Err(format!("Unknown tool: {name}")),
     }

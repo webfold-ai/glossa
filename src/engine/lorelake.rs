@@ -132,7 +132,10 @@ mod tests {
     #[test]
     fn test_huggingface_jsonl_formatting() {
         let mut map = BTreeMap::new();
-        map.insert("Welcome to our cloud platform".to_string(), "Bienvenido a nuestra plataforma en la nube".to_string());
+        map.insert(
+            "Welcome to our cloud platform".to_string(),
+            "Bienvenido a nuestra plataforma en la nube".to_string(),
+        );
         map.insert("Settings".to_string(), "Configuración".to_string());
 
         let jsonl = format_huggingface_jsonl(&map, "es");

@@ -105,13 +105,13 @@ impl super::super::TranslationProvider for AnthropicProvider {
             .await
             .map_err(|e| super::super::EngineError::Json(e.to_string()))?;
 
-        let first = anthropic_res
-            .content
-            .first()
-            .ok_or_else(|| super::super::EngineError::Api("Empty response from Claude".to_string()))?;
+        let first = anthropic_res.content.first().ok_or_else(|| {
+            super::super::EngineError::Api("Empty response from Claude".to_string())
+        })?;
 
-        let parsed: JsonOutput = serde_json::from_str(&first.text)
-            .map_err(|e| super::super::EngineError::Json(format!("Failed to parse Claude JSON: {e}")))?;
+        let parsed: JsonOutput = serde_json::from_str(&first.text).map_err(|e| {
+            super::super::EngineError::Json(format!("Failed to parse Claude JSON: {e}"))
+        })?;
 
         Ok(parsed.translations)
     }

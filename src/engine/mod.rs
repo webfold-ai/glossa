@@ -69,7 +69,10 @@ impl TranslationEngine {
             redacted_sources.push(redacted);
         }
 
-        let raw_translations = self.provider.translate_batch(&redacted_sources, target_locale).await?;
+        let raw_translations = self
+            .provider
+            .translate_batch(&redacted_sources, target_locale)
+            .await?;
 
         if raw_translations.len() != sources.len() {
             return Err(EngineError::Api(format!(

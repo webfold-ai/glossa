@@ -218,7 +218,11 @@ This is the final paragraph.
         assert!(!items.is_empty());
         let texts: Vec<&str> = items.iter().map(|it| it.canonical_text.as_str()).collect();
         assert!(texts.iter().any(|t| t == &"Getting Started"));
-        assert!(texts.iter().any(|t| t.contains("Check the <0>documentation</0> for more details.")));
-        assert!(texts.iter().any(|t| t.contains("This is the final paragraph.")));
+        assert!(texts
+            .iter()
+            .any(|t| t.contains("Check the <0>documentation</0> for more details.")));
+        assert!(texts
+            .iter()
+            .any(|t| t.contains("This is the final paragraph.")));
     }
 }

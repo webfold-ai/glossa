@@ -42,7 +42,10 @@ enum JsxNode {
 /// hunting for a closing tag that could never exist — O(file size) wasted
 /// work per generic usage, compounding across every generic in the file.
 fn preceded_by_identifier_char(chars: &[char], lt_idx: usize) -> bool {
-    lt_idx > 0 && (chars[lt_idx - 1].is_alphanumeric() || chars[lt_idx - 1] == '_' || chars[lt_idx - 1] == '$')
+    lt_idx > 0
+        && (chars[lt_idx - 1].is_alphanumeric()
+            || chars[lt_idx - 1] == '_'
+            || chars[lt_idx - 1] == '$')
 }
 
 /// Checks if a tag is a structural container rather than a single phrase/message.
@@ -106,7 +109,9 @@ pub fn extract_jsx(source: &str, file_path: &str) -> Vec<ExtractedItem> {
         if chars[idx] == '<' && idx + 1 < len && !preceded_by_identifier_char(&chars, idx) {
             let next = chars[idx + 1];
             if next.is_ascii_alphabetic() {
-                if let Some((new_idx, node)) = parse_jsx_element_node(&chars, idx, &mut line, &mut col) {
+                if let Some((new_idx, node)) =
+                    parse_jsx_element_node(&chars, idx, &mut line, &mut col)
+                {
                     collect_jsx_items(&node, file_path, &mut items, &mut seen_coords);
                     idx = new_idx;
                     continue;
@@ -162,12 +167,16 @@ fn collect_jsx_items(
         }
 
         // 2. Check container semantics
-        let has_child_elements = children.iter().any(|c| matches!(c, JsxNode::Element { .. }));
+        let has_child_elements = children
+            .iter()
+            .any(|c| matches!(c, JsxNode::Element { .. }));
 
         if is_container_tag(tag) && has_child_elements {
             for child in children {
                 match child {
-                    JsxNode::Element { .. } => collect_jsx_items(child, file_path, items, seen_coords),
+                    JsxNode::Element { .. } => {
+                        collect_jsx_items(child, file_path, items, seen_coords)
+                    }
                     JsxNode::Text(t) => {
                         let norm = normalize_whitespace(t);
                         if !norm.trim().is_empty() && norm.chars().any(|c| c.is_alphanumeric()) {
@@ -288,7 +297,9 @@ fn parse_jsx_element_node(
     let tag_col = *col;
     let mut tag_name = String::new();
 
-    while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '.' || chars[i] == '-' || chars[i] == '_') {
+    while i < chars.len()
+        && (chars[i].is_alphanumeric() || chars[i] == '.' || chars[i] == '-' || chars[i] == '_')
+    {
         tag_name.push(chars[i]);
         i += 1;
     }
@@ -297,7 +308,8 @@ fn parse_jsx_element_node(
         return None;
     }
 
-    let is_ignored = tag_name == "script" || tag_name == "style" || tag_name == "code" || tag_name == "pre";
+    let is_ignored =
+        tag_name == "script" || tag_name == "style" || tag_name == "code" || tag_name == "pre";
     let mut attrs = Vec::new();
     let mut is_self_closing = false;
 
@@ -319,7 +331,8 @@ fn parse_jsx_element_node(
         }
 
         let mut attr_name = String::new();
-        while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '-' || chars[i] == '_') {
+        while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '-' || chars[i] == '_')
+        {
             attr_name.push(chars[i]);
             i += 1;
         }
@@ -631,7 +644,10 @@ mod tests {
             "const z=a<b+1?a:b;",
         ] {
             let items = extract_jsx(source, "test.js");
-            assert!(items.is_empty(), "source `{source}` must extract nothing, not hang");
+            assert!(
+                items.is_empty(),
+                "source `{source}` must extract nothing, not hang"
+            );
         }
     }
 
@@ -660,7 +676,9 @@ mod tests {
         // generics above it must not be mistaken for tags, and (this is the
         // actual regression) parsing must complete at all rather than
         // scanning to EOF for each one.
-        assert!(items.iter().all(|i| i.canonical_text != "string" && i.canonical_text != "number"));
+        assert!(items
+            .iter()
+            .all(|i| i.canonical_text != "string" && i.canonical_text != "number"));
     }
 
     /// Diagnostic regression test: verbatim content of
@@ -746,7 +764,9 @@ export const Textarea: FC<
         });
         match rx.recv_timeout(std::time::Duration::from_secs(5)) {
             Ok(_) => {}
-            Err(_) => panic!("extract_jsx hung for >5s on textarea.tsx — the bug is in the JSX parser itself"),
+            Err(_) => panic!(
+                "extract_jsx hung for >5s on textarea.tsx — the bug is in the JSX parser itself"
+            ),
         }
     }
 
@@ -1387,8 +1407,12 @@ function f() {
         assert!(!items.is_empty());
         let texts: Vec<&str> = items.iter().map(|it| it.canonical_text.as_str()).collect();
         assert!(texts.iter().any(|t| t.contains("Welcome to our platform")));
-        assert!(texts.iter().any(|t| t.contains("Hello {name}, you have {count} notifications.")));
-        assert!(texts.iter().any(|t| t.contains("Click <0>here</0> to continue")));
+        assert!(texts
+            .iter()
+            .any(|t| t.contains("Hello {name}, you have {count} notifications.")));
+        assert!(texts
+            .iter()
+            .any(|t| t.contains("Click <0>here</0> to continue")));
         assert!(texts.iter().any(|t| t.contains("Enter email")));
     }
 }

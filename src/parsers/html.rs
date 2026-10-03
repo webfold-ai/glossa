@@ -27,7 +27,9 @@ pub fn extract_html(source: &str, file_path: &str) -> Vec<ExtractedItem> {
             let elem_line = line;
             let elem_col = col;
 
-            if let Some((new_idx, terms, attrs)) = parse_html_element(&chars, idx, &mut line, &mut col, file_path) {
+            if let Some((new_idx, terms, attrs)) =
+                parse_html_element(&chars, idx, &mut line, &mut col, file_path)
+            {
                 items.extend(attrs);
 
                 let normalized = ApeironTerm::normalize_sequence(terms);
@@ -89,10 +91,26 @@ fn parse_html_element(
 
     let is_void = matches!(
         tag_name.to_ascii_lowercase().as_str(),
-        "area" | "base" | "br" | "col" | "embed" | "hr" | "img" | "input" | "link" | "meta" | "param" | "source" | "track" | "wbr"
+        "area"
+            | "base"
+            | "br"
+            | "col"
+            | "embed"
+            | "hr"
+            | "img"
+            | "input"
+            | "link"
+            | "meta"
+            | "param"
+            | "source"
+            | "track"
+            | "wbr"
     );
 
-    let is_ignored = matches!(tag_name.to_ascii_lowercase().as_str(), "script" | "style" | "code" | "pre");
+    let is_ignored = matches!(
+        tag_name.to_ascii_lowercase().as_str(),
+        "script" | "style" | "code" | "pre"
+    );
 
     let mut attr_items = Vec::new();
     let mut is_self_closing = is_void;
@@ -116,7 +134,8 @@ fn parse_html_element(
         let attr_line = *line;
         let attr_col = *col;
         let mut attr_name = String::new();
-        while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '-' || chars[i] == '_') {
+        while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '-' || chars[i] == '_')
+        {
             attr_name.push(chars[i]);
             i += 1;
         }
@@ -137,7 +156,10 @@ fn parse_html_element(
                     i += 1;
                 }
 
-                if (attr_name == "placeholder" || attr_name == "title" || attr_name == "alt" || attr_name == "aria-label")
+                if (attr_name == "placeholder"
+                    || attr_name == "title"
+                    || attr_name == "alt"
+                    || attr_name == "aria-label")
                     && !attr_val.trim().is_empty()
                 {
                     let trimmed = attr_val.trim().to_string();
@@ -173,12 +195,19 @@ fn parse_html_element(
         if chars[i] == '<' && i + 1 < chars.len() && chars[i + 1] == '/' {
             let mut close_idx = i + 2;
             let mut close_tag = String::new();
-            while close_idx < chars.len() && (chars[close_idx].is_alphanumeric() || chars[close_idx] == '-' || chars[close_idx] == '_') {
+            while close_idx < chars.len()
+                && (chars[close_idx].is_alphanumeric()
+                    || chars[close_idx] == '-'
+                    || chars[close_idx] == '_')
+            {
                 close_tag.push(chars[close_idx]);
                 close_idx += 1;
             }
             skip_ws(chars, &mut close_idx, line, col);
-            if close_idx < chars.len() && chars[close_idx] == '>' && close_tag.eq_ignore_ascii_case(&tag_name) {
+            if close_idx < chars.len()
+                && chars[close_idx] == '>'
+                && close_tag.eq_ignore_ascii_case(&tag_name)
+            {
                 i = close_idx + 1;
                 break;
             }
@@ -186,7 +215,9 @@ fn parse_html_element(
 
         // Child element
         if chars[i] == '<' && i + 1 < chars.len() && chars[i + 1].is_ascii_alphabetic() {
-            if let Some((new_idx, sub_terms, sub_attrs)) = parse_html_element(chars, i, line, col, file_path) {
+            if let Some((new_idx, sub_terms, sub_attrs)) =
+                parse_html_element(chars, i, line, col, file_path)
+            {
                 attr_items.extend(sub_attrs);
                 let tag_id = tag_counter;
                 tag_counter += 1;
@@ -225,7 +256,10 @@ fn parse_html_element(
 
         // Plain text
         let mut text = String::new();
-        while i < chars.len() && chars[i] != '<' && !(chars[i] == '{' && i + 1 < chars.len() && chars[i + 1] == '{') {
+        while i < chars.len()
+            && chars[i] != '<'
+            && !(chars[i] == '{' && i + 1 < chars.len() && chars[i + 1] == '{')
+        {
             if chars[i] == '\n' {
                 *line += 1;
                 *col = 1;
@@ -293,7 +327,9 @@ mod tests {
         assert!(!items.is_empty());
         let texts: Vec<&str> = items.iter().map(|it| it.canonical_text.as_str()).collect();
         assert!(texts.iter().any(|t| t.contains("Welcome to Open Store")));
-        assert!(texts.iter().any(|t| t.contains("Order status for {customer_name}: shipped.")));
+        assert!(texts
+            .iter()
+            .any(|t| t.contains("Order status for {customer_name}: shipped.")));
         assert!(texts.iter().any(|t| t.contains("Enter coupon code")));
     }
 }

@@ -131,13 +131,14 @@ impl super::super::TranslationProvider for OpenAiProvider {
             .await
             .map_err(|e| super::super::EngineError::Json(e.to_string()))?;
 
-        let first = chat_res
-            .choices
-            .first()
-            .ok_or_else(|| super::super::EngineError::Api("Empty response from model".to_string()))?;
+        let first = chat_res.choices.first().ok_or_else(|| {
+            super::super::EngineError::Api("Empty response from model".to_string())
+        })?;
 
-        let parsed: JsonTranslations = serde_json::from_str(&first.message.content)
-            .map_err(|e| super::super::EngineError::Json(format!("Failed to parse JSON translations: {e}")))?;
+        let parsed: JsonTranslations =
+            serde_json::from_str(&first.message.content).map_err(|e| {
+                super::super::EngineError::Json(format!("Failed to parse JSON translations: {e}"))
+            })?;
 
         Ok(parsed.translations)
     }

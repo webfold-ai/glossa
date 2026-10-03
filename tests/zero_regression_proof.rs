@@ -15,9 +15,7 @@ use glossa::engine::gate::ApeironNullGate;
 use glossa::lockfile::{LingoLock, LocaleEntry, LockEntry};
 use glossa::parsers::code::extract_code_strings;
 use glossa::parsers::jsx::extract_jsx;
-use glossa::parsers::resource::{
-    extract_fluent, extract_json, extract_properties, extract_yaml,
-};
+use glossa::parsers::resource::{extract_fluent, extract_json, extract_properties, extract_yaml};
 use glossa::parsers::svelte::extract_svelte;
 use glossa::parsers::vue::extract_vue;
 use std::collections::BTreeMap;
@@ -67,7 +65,8 @@ fn test_zero_false_positives_in_code_and_markup() {
     let extracted_texts: Vec<&str> = items.iter().map(|it| it.canonical_text.as_str()).collect();
 
     // 1. Assert MUST NOT extract non-translatable attributes, code constants, or internal IDs
-    assert!(!extracted_texts.contains(&"flex items-center justify-between bg-slate-900 text-white p-4 rounded-lg"));
+    assert!(!extracted_texts
+        .contains(&"flex items-center justify-between bg-slate-900 text-white p-4 rounded-lg"));
     assert!(!extracted_texts.contains(&"security-admin-panel"));
     assert!(!extracted_texts.contains(&"sec-panel-root"));
     assert!(!extracted_texts.contains(&"https://api.production.internal/v2/users"));
@@ -82,9 +81,18 @@ fn test_zero_false_positives_in_code_and_markup() {
     assert!(!extracted_texts.contains(&"active"));
 
     // 2. Assert MUST extract ONLY legitimate UI text & translatable attributes
-    assert!(extracted_texts.contains(&"Security Shield"), "Must extract img alt attribute");
-    assert!(extracted_texts.contains(&"Revoke All Sessions"), "Must extract button text");
-    assert!(extracted_texts.contains(&"Audit Documentation"), "Must extract anchor text");
+    assert!(
+        extracted_texts.contains(&"Security Shield"),
+        "Must extract img alt attribute"
+    );
+    assert!(
+        extracted_texts.contains(&"Revoke All Sessions"),
+        "Must extract button text"
+    );
+    assert!(
+        extracted_texts.contains(&"Audit Documentation"),
+        "Must extract anchor text"
+    );
 }
 
 // =========================================================================
@@ -99,8 +107,12 @@ fn test_translation_calls_extracted_as_clean_text_not_slots() {
     }
     "#;
     let react_items = extract_jsx(react_src, "CartHeader.tsx");
-    let react_item = react_items.iter().find(|i| i.canonical_text == "Review Your Order")
-        .expect("Must extract 'Review Your Order' directly as message text, NOT '{Review Your Order}'");
+    let react_item = react_items
+        .iter()
+        .find(|i| i.canonical_text == "Review Your Order")
+        .expect(
+            "Must extract 'Review Your Order' directly as message text, NOT '{Review Your Order}'",
+        );
     assert_eq!(react_item.canonical_text, "Review Your Order");
 
     // Vue 3 SFC
@@ -110,7 +122,9 @@ fn test_translation_calls_extracted_as_clean_text_not_slots() {
     </template>
     "#;
     let vue_items = extract_vue(vue_src, "Billing.vue");
-    let vue_item = vue_items.iter().find(|i| i.canonical_text == "Billing & Invoices")
+    let vue_item = vue_items
+        .iter()
+        .find(|i| i.canonical_text == "Billing & Invoices")
         .expect("Must extract 'Billing & Invoices' directly without slot braces");
     assert_eq!(vue_item.canonical_text, "Billing & Invoices");
 
@@ -119,7 +133,9 @@ fn test_translation_calls_extracted_as_clean_text_not_slots() {
     <h2>{t('Workspace Management')}</h2>
     "#;
     let svelte_items = extract_svelte(svelte_src, "Workspace.svelte");
-    let svelte_item = svelte_items.iter().find(|i| i.canonical_text == "Workspace Management")
+    let svelte_item = svelte_items
+        .iter()
+        .find(|i| i.canonical_text == "Workspace Management")
         .expect("Must extract 'Workspace Management' directly without slot braces");
     assert_eq!(svelte_item.canonical_text, "Workspace Management");
 
@@ -132,8 +148,12 @@ fn test_translation_calls_extracted_as_clean_text_not_slots() {
     };
     "#;
     let ts_items = extract_code_strings(ts_src, "notifications.ts");
-    assert!(ts_items.iter().any(|i| i.canonical_text == "Changes persisted to storage"));
-    assert!(ts_items.iter().any(|i| i.canonical_text == "WebSocket connection dropped, retrying..."));
+    assert!(ts_items
+        .iter()
+        .any(|i| i.canonical_text == "Changes persisted to storage"));
+    assert!(ts_items
+        .iter()
+        .any(|i| i.canonical_text == "WebSocket connection dropped, retrying..."));
 }
 
 // =========================================================================
@@ -142,15 +162,24 @@ fn test_translation_calls_extracted_as_clean_text_not_slots() {
 #[test]
 fn test_roundtrip_invariance_all_catalog_formats() {
     let mut original = BTreeMap::new();
-    original.insert("welcome_msg".to_string(), "Welcome to Cloud, {user}!".to_string());
-    original.insert("system_status".to_string(), "Node {id} operational (uptime: {uptime}h)".to_string());
+    original.insert(
+        "welcome_msg".to_string(),
+        "Welcome to Cloud, {user}!".to_string(),
+    );
+    original.insert(
+        "system_status".to_string(),
+        "Node {id} operational (uptime: {uptime}h)".to_string(),
+    );
     original.insert("cta_button".to_string(), "Upgrade Now".to_string());
 
     // 1. JSON Roundtrip
     let json_emitted = resource::emit_json(&original);
     let json_reparsed = extract_json(&json_emitted, "test.json");
     for (k, v) in &original {
-        let found = json_reparsed.iter().find(|it| it.key.as_deref() == Some(k.as_str())).unwrap();
+        let found = json_reparsed
+            .iter()
+            .find(|it| it.key.as_deref() == Some(k.as_str()))
+            .unwrap();
         assert_eq!(&found.canonical_text, v, "JSON roundtrip drift on key {k}");
     }
 
@@ -158,7 +187,10 @@ fn test_roundtrip_invariance_all_catalog_formats() {
     let yaml_emitted = resource::emit_yaml(&original, "en");
     let yaml_reparsed = extract_yaml(&yaml_emitted, "test.yml");
     for (k, v) in &original {
-        let found = yaml_reparsed.iter().find(|it| it.key.as_deref() == Some(format!("en.{k}").as_str())).unwrap();
+        let found = yaml_reparsed
+            .iter()
+            .find(|it| it.key.as_deref() == Some(format!("en.{k}").as_str()))
+            .unwrap();
         assert_eq!(&found.canonical_text, v, "YAML roundtrip drift on key {k}");
     }
 
@@ -166,8 +198,14 @@ fn test_roundtrip_invariance_all_catalog_formats() {
     let ftl_emitted = resource::emit_fluent(&original);
     let ftl_reparsed = extract_fluent(&ftl_emitted, "test.ftl");
     for (k, v) in &original {
-        let found = ftl_reparsed.iter().find(|it| it.key.as_deref() == Some(k.as_str())).unwrap();
-        assert_eq!(&found.canonical_text, v, "Fluent roundtrip drift on key {k}");
+        let found = ftl_reparsed
+            .iter()
+            .find(|it| it.key.as_deref() == Some(k.as_str()))
+            .unwrap();
+        assert_eq!(
+            &found.canonical_text, v,
+            "Fluent roundtrip drift on key {k}"
+        );
     }
 
     // 4. Java/Spring Properties Roundtrip
@@ -177,8 +215,14 @@ fn test_roundtrip_invariance_all_catalog_formats() {
     }
     let prop_reparsed = extract_properties(&prop_str, "test.properties");
     for (k, v) in &original {
-        let found = prop_reparsed.iter().find(|it| it.key.as_deref() == Some(k.as_str())).unwrap();
-        assert_eq!(&found.canonical_text, v, "Properties roundtrip drift on key {k}");
+        let found = prop_reparsed
+            .iter()
+            .find(|it| it.key.as_deref() == Some(k.as_str()))
+            .unwrap();
+        assert_eq!(
+            &found.canonical_text, v,
+            "Properties roundtrip drift on key {k}"
+        );
     }
 }
 
@@ -226,12 +270,22 @@ fn test_lockfile_merge_order_invariance_proves_zero_git_conflicts() {
 
     let branch_b = make_branch(&[
         ("Shared Button", "Shared Button", "fr", "Bouton Partagé"),
-        ("Settings Page", "Settings Page", "es", "Página de Configuración"),
+        (
+            "Settings Page",
+            "Settings Page",
+            "es",
+            "Página de Configuración",
+        ),
     ]);
 
     let branch_c = make_branch(&[
         ("Checkout Modal", "Checkout Modal", "de", "Kassen-Modal"),
-        ("Shared Button", "Shared Button", "de", "Gemeinsame Schaltfläche"),
+        (
+            "Shared Button",
+            "Shared Button",
+            "de",
+            "Gemeinsame Schaltfläche",
+        ),
     ]);
 
     // Permutation 1: A + B + C
@@ -254,8 +308,14 @@ fn test_lockfile_merge_order_invariance_proves_zero_git_conflicts() {
     assert_eq!(merge_2.entries.len(), merge_3.entries.len());
 
     for (coord, entry1) in &merge_1.entries {
-        let entry2 = merge_2.entries.get(coord).expect("Entry must exist in merge_2");
-        let entry3 = merge_3.entries.get(coord).expect("Entry must exist in merge_3");
+        let entry2 = merge_2
+            .entries
+            .get(coord)
+            .expect("Entry must exist in merge_2");
+        let entry3 = merge_3
+            .entries
+            .get(coord)
+            .expect("Entry must exist in merge_3");
 
         assert_eq!(entry1.canonical_text, entry2.canonical_text);
         assert_eq!(entry2.canonical_text, entry3.canonical_text);
@@ -279,22 +339,38 @@ fn test_adversarial_integrity_gate_exhaustive_catch_rate() {
     let source = "Hello <0>{username}</0>, you have <1>{unreadCount}</1> new messages.";
 
     // Attack / Corruption 1: Dropped slot {unreadCount}
-    assert!(ApeironNullGate::validate(source, "Bonjour <0>{username}</0>, vous avez de nouveaux messages.").is_err());
+    assert!(ApeironNullGate::validate(
+        source,
+        "Bonjour <0>{username}</0>, vous avez de nouveaux messages."
+    )
+    .is_err());
 
     // Attack / Corruption 2: Hallucinated / injected slot {bonusCredits}
     assert!(ApeironNullGate::validate(source, "Bonjour <0>{username}</0>, vous avez <1>{unreadCount}</1> messages et {bonusCredits} crédits.").is_err());
 
     // Attack / Corruption 3: Inverted tag numbers
-    assert!(ApeironNullGate::validate(source, "Bonjour <1>{username}</1>, vous avez <0>{unreadCount}</0> messages.").is_err());
+    assert!(ApeironNullGate::validate(
+        source,
+        "Bonjour <1>{username}</1>, vous avez <0>{unreadCount}</0> messages."
+    )
+    .is_err());
 
     // Attack / Corruption 4: Unclosed tag
-    assert!(ApeironNullGate::validate(source, "Bonjour <0>{username}, vous avez <1>{unreadCount}</1> messages.").is_err());
+    assert!(ApeironNullGate::validate(
+        source,
+        "Bonjour <0>{username}, vous avez <1>{unreadCount}</1> messages."
+    )
+    .is_err());
 
     // Attack / Corruption 5: XSS script injection
     assert!(ApeironNullGate::validate(source, "Bonjour <script>window.location='http://attacker.com'</script> <0>{username}</0> <1>{unreadCount}</1>").is_err());
 
     // Attack / Corruption 6: Malicious onerror handler
-    assert!(ApeironNullGate::validate(source, "Bonjour <img src=x onerror=alert(1)> <0>{username}</0> <1>{unreadCount}</1>").is_err());
+    assert!(ApeironNullGate::validate(
+        source,
+        "Bonjour <img src=x onerror=alert(1)> <0>{username}</0> <1>{unreadCount}</1>"
+    )
+    .is_err());
 
     // Positive check: Valid translation with proper slots and tags MUST PASS
     let valid = "Bonjour <0>{username}</0>, vous avez <1>{unreadCount}</1> nouveaux messages.";
@@ -311,20 +387,26 @@ fn test_codegen_emits_valid_zero_dependency_accessors() {
     let mut lock = LingoLock::new();
     let coord1 = ApeironCoord::from_str_canonical("Welcome, {user}!");
     let mut locs = BTreeMap::new();
-    locs.insert("es".to_string(), LocaleEntry {
-        translated_text: "¡Bienvenido, {user}!".to_string(),
-        translated_hash: 1,
-        provider: "test".to_string(),
-        updated_at: "2026-09-15T00:00:00Z".to_string(),
-        quality_score: 1.0,
-    });
-    lock.entries.insert(coord1, LockEntry {
-        coord: coord1,
-        source_hash: coord1.raw(),
-        canonical_text: "Welcome, {user}!".to_string(),
-        context: None,
-        locales: locs,
-    });
+    locs.insert(
+        "es".to_string(),
+        LocaleEntry {
+            translated_text: "¡Bienvenido, {user}!".to_string(),
+            translated_hash: 1,
+            provider: "test".to_string(),
+            updated_at: "2026-09-15T00:00:00Z".to_string(),
+            quality_score: 1.0,
+        },
+    );
+    lock.entries.insert(
+        coord1,
+        LockEntry {
+            coord: coord1,
+            source_hash: coord1.raw(),
+            canonical_text: "Welcome, {user}!".to_string(),
+            context: None,
+            locales: locs,
+        },
+    );
 
     // 1. TypeScript Codegen
     let ts_opts = CodegenOptions {
@@ -336,7 +418,10 @@ fn test_codegen_emits_valid_zero_dependency_accessors() {
     assert!(ts_code.contains("export type Locale = \"en\" | \"es\";"));
     assert!(ts_code.contains("export const m = {"));
     assert!(ts_code.contains("user: string | number"));
-    assert!(!ts_code.contains("import "), "Codegen MUST have zero external runtime imports (0kB bundle)");
+    assert!(
+        !ts_code.contains("import "),
+        "Codegen MUST have zero external runtime imports (0kB bundle)"
+    );
 
     // 2. Rust Codegen
     let rs_opts = CodegenOptions {

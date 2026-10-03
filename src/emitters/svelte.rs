@@ -35,7 +35,12 @@ pub fn emit_svelte_inlined(terms: &[ApeironTerm]) -> String {
                 out.push_str(raw_expr.as_deref().unwrap_or(name));
                 out.push('}');
             }
-            ApeironTerm::Tag { tag, attrs, children, .. } => {
+            ApeironTerm::Tag {
+                tag,
+                attrs,
+                children,
+                ..
+            } => {
                 out.push('<');
                 out.push_str(tag);
                 for (k, v) in attrs {

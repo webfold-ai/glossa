@@ -98,7 +98,8 @@ pub fn extract_vue(source: &str, file_path: &str) -> Vec<ExtractedItem> {
         }
 
         if chars[idx] == '<' && idx + 1 < len && chars[idx + 1].is_ascii_alphabetic() {
-            if let Some((new_idx, node)) = parse_vue_element_node(&chars, idx, &mut line, &mut col) {
+            if let Some((new_idx, node)) = parse_vue_element_node(&chars, idx, &mut line, &mut col)
+            {
                 collect_vue_items(&node, file_path, &mut items, &mut seen_coords);
                 idx = new_idx;
                 continue;
@@ -151,12 +152,16 @@ fn collect_vue_items(
             }
         }
 
-        let has_child_elements = children.iter().any(|c| matches!(c, VueNode::Element { .. }));
+        let has_child_elements = children
+            .iter()
+            .any(|c| matches!(c, VueNode::Element { .. }));
 
         if is_container_tag(tag) && has_child_elements {
             for child in children {
                 match child {
-                    VueNode::Element { .. } => collect_vue_items(child, file_path, items, seen_coords),
+                    VueNode::Element { .. } => {
+                        collect_vue_items(child, file_path, items, seen_coords)
+                    }
                     VueNode::Text(t) => {
                         let norm = normalize_whitespace(t);
                         if !norm.trim().is_empty() && norm.chars().any(|c| c.is_alphanumeric()) {
@@ -361,7 +366,9 @@ fn parse_vue_element_node(
             let mut close_idx = i + 2;
             let mut close_tag = String::new();
             while close_idx < chars.len()
-                && (chars[close_idx].is_alphanumeric() || chars[close_idx] == '-' || chars[close_idx] == '_')
+                && (chars[close_idx].is_alphanumeric()
+                    || chars[close_idx] == '-'
+                    || chars[close_idx] == '_')
             {
                 close_tag.push(chars[close_idx]);
                 close_idx += 1;
@@ -405,7 +412,10 @@ fn parse_vue_element_node(
 
         // Plain text
         let mut text = String::new();
-        while i < chars.len() && chars[i] != '<' && !(chars[i] == '{' && i + 1 < chars.len() && chars[i + 1] == '{') {
+        while i < chars.len()
+            && chars[i] != '<'
+            && !(chars[i] == '{' && i + 1 < chars.len() && chars[i + 1] == '{')
+        {
             if chars[i] == '\n' {
                 *line += 1;
                 *col = 1;
@@ -490,7 +500,9 @@ mod tests {
         assert!(!items.is_empty());
         let texts: Vec<&str> = items.iter().map(|it| it.canonical_text.as_str()).collect();
         assert!(texts.iter().any(|t| t.contains("User Profile")));
-        assert!(texts.iter().any(|t| t.contains("Welcome, {user.name}! You have {unreadCount} new messages.")));
+        assert!(texts
+            .iter()
+            .any(|t| t.contains("Welcome, {user.name}! You have {unreadCount} new messages.")));
         assert!(texts.iter().any(|t| t.contains("View Details")));
         assert!(texts.iter().any(|t| t.contains("Click to view details")));
     }

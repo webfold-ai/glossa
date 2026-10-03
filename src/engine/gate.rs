@@ -17,10 +17,14 @@ pub enum GateViolation {
     #[error("Mismatched or unclosed markup tag: '<{tag}>' in translation")]
     UnclosedTag { tag: String },
 
-    #[error("Security violation: potential script or dangerous HTML injection detected in translation")]
+    #[error(
+        "Security violation: potential script or dangerous HTML injection detected in translation"
+    )]
     SecurityRisk { reason: String },
 
-    #[error("Glossary violation: term '{term}' was expected to be translated/preserved as '{expected}'")]
+    #[error(
+        "Glossary violation: term '{term}' was expected to be translated/preserved as '{expected}'"
+    )]
     GlossaryViolation { term: String, expected: String },
 }
 
@@ -44,7 +48,11 @@ impl ApeironNullGate {
     ) -> Result<(), GateViolation> {
         // 1. Check for dangerous HTML injections
         let lower = translated.to_ascii_lowercase();
-        if lower.contains("<script") || lower.contains("javascript:") || lower.contains("onerror=") || lower.contains("onload=") {
+        if lower.contains("<script")
+            || lower.contains("javascript:")
+            || lower.contains("onerror=")
+            || lower.contains("onload=")
+        {
             return Err(GateViolation::SecurityRisk {
                 reason: "Dangerous script or attribute found".to_string(),
             });
@@ -168,7 +176,12 @@ mod tests {
         let src = "Hello {name}, you have {count} items.";
         let trans = "Hola {name}, tienes artículos.";
         let err = ApeironNullGate::validate(src, trans).unwrap_err();
-        assert_eq!(err, GateViolation::MissingSlot { slot: "count".to_string() });
+        assert_eq!(
+            err,
+            GateViolation::MissingSlot {
+                slot: "count".to_string()
+            }
+        );
     }
 
     #[test]

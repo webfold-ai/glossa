@@ -130,7 +130,11 @@ impl ApeironTerm {
                 ApeironTerm::Plural { slot_name, cases } => {
                     out.push_str(&format!("{{{slot_name}, plural, "));
                     for (cat, branch) in cases {
-                        out.push_str(&format!("{} {{{}}} ", cat.as_str(), Self::to_canonical_string(branch)));
+                        out.push_str(&format!(
+                            "{} {{{}}} ",
+                            cat.as_str(),
+                            Self::to_canonical_string(branch)
+                        ));
                     }
                     out.push('}');
                 }
@@ -236,7 +240,9 @@ impl ApeironCatalog {
     pub fn insert(&mut self, mut item: ExtractedItem) {
         if let Some(existing) = self.items.get_mut(&item.coord) {
             existing.locations.append(&mut item.locations);
-            existing.locations.sort_by(|a, b| (&a.file_path, a.line).cmp(&(&b.file_path, b.line)));
+            existing
+                .locations
+                .sort_by(|a, b| (&a.file_path, a.line).cmp(&(&b.file_path, b.line)));
             existing.locations.dedup();
             if existing.key.is_none() && item.key.is_some() {
                 existing.key = item.key;

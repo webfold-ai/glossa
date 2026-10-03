@@ -175,7 +175,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             // Auto-detect and import incumbent configurations if present
             let detected_imports = crate::importer::detect_incumbent_systems(&root);
             for imp in &detected_imports {
-                println!("🔄 Detected existing {} config at {}! Migrating to Glossa...", imp.system.name(), imp.config_file.display());
+                println!(
+                    "🔄 Detected existing {} config at {}! Migrating to Glossa...",
+                    imp.system.name(),
+                    imp.config_file.display()
+                );
                 crate::importer::import_to_glossa_config(imp, &mut cfg);
             }
 
@@ -210,7 +214,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let catalog = extract_directory(&root, &[])?;
             let elapsed = start.elapsed();
 
-            println!("✓ Extracted {} translatable units in {:?}", catalog.len(), elapsed);
+            println!(
+                "✓ Extracted {} translatable units in {:?}",
+                catalog.len(),
+                elapsed
+            );
 
             let lock_path = LingoLock::resolve_path(&root);
             let mut lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
@@ -294,7 +302,10 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
                                     engine.provider_name(),
                                     1.0,
                                 );
-                                println!("  ✓ [{loc}] \"{}\" -> \"{}\"", delta.canonical_text, trans);
+                                println!(
+                                    "  ✓ [{loc}] \"{}\" -> \"{}\"",
+                                    delta.canonical_text, trans
+                                );
                             }
                         }
                         Err(err) => {
@@ -328,7 +339,8 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
 
             let deltas = lock.compute_deltas(&config.target_locales);
-            let is_ci = ci || std::env::var("CI").is_ok() || std::env::var("GITHUB_ACTIONS").is_ok();
+            let is_ci =
+                ci || std::env::var("CI").is_ok() || std::env::var("GITHUB_ACTIONS").is_ok();
 
             if !deltas.is_empty() {
                 if format == "github" || is_ci {
@@ -356,12 +368,14 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
                 // Write GitHub Step Summary if in GitHub Actions
                 if let Ok(summary_path) = std::env::var("GITHUB_STEP_SUMMARY") {
-                    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(summary_path) {
+                    if let Ok(mut file) = OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(summary_path)
+                    {
                         let _ = writeln!(file, "## ❌ ptyktos-lingo CI Check: FAILED");
-                        let _ = writeln!(
-                            file,
-                            "| Target Locales | Missing Items | Total Entries |"
-                        );
+                        let _ =
+                            writeln!(file, "| Target Locales | Missing Items | Total Entries |");
                         let _ = writeln!(file, "| :--- | :--- | :--- |");
                         let _ = writeln!(
                             file,
@@ -377,7 +391,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             if let Ok(summary_path) = std::env::var("GITHUB_STEP_SUMMARY") {
-                if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(summary_path) {
+                if let Ok(mut file) = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(summary_path)
+                {
                     let _ = writeln!(file, "## ✅ Glossa / ptyktos-lingo CI Check: PASSED");
                     let _ = writeln!(file, "100% localization coverage across {:?}. Validated by Zero-Fault Integrity Gate.", config.target_locales);
                 }
@@ -400,7 +418,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             if !deltas.is_empty() {
                 println!("\nMissing Translations:");
                 for d in deltas.iter().take(15) {
-                    println!("   + [{}] \"{}\"", d.missing_locales.join(", "), d.canonical_text);
+                    println!(
+                        "   + [{}] \"{}\"",
+                        d.missing_locales.join(", "),
+                        d.canonical_text
+                    );
                 }
                 if deltas.len() > 15 {
                     println!("   ... and {} more", deltas.len() - 15);
@@ -436,7 +458,10 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             fs::write(&out_file, resource::emit_json(&pseudo_map))?;
 
             println!("✓ Pseudo-localization generated at {}", out_file.display());
-            println!("  Example: \"{}\"", pseudo_map.values().next().unwrap_or(&String::new()));
+            println!(
+                "  Example: \"{}\"",
+                pseudo_map.values().next().unwrap_or(&String::new())
+            );
         }
 
         Commands::Sync => {
@@ -459,7 +484,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             crate::mcp::run_mcp_server().await?;
         }
 
-        Commands::Lorelake { action, endpoint, bucket } => {
+        Commands::Lorelake {
+            action,
+            endpoint,
+            bucket,
+        } => {
             use crate::engine::lorelake::{LorelakeClient, LorelakeConfig};
             let config = LorelakeConfig {
                 endpoint,
@@ -473,10 +502,17 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
             match action.as_str() {
                 "push" => {
-                    println!("🌊 Pushing {} translations to Lorelake content-addressed store...", lock.entries.len());
+                    println!(
+                        "🌊 Pushing {} translations to Lorelake content-addressed store...",
+                        lock.entries.len()
+                    );
                     match client.push_translations(&lock).await {
-                        Ok(pushed) => println!("✓ Successfully synced {pushed} coordinate entries to Lorelake."),
-                        Err(e) => println!("! Lorelake sync notice: {e} (continuing with local cache)"),
+                        Ok(pushed) => println!(
+                            "✓ Successfully synced {pushed} coordinate entries to Lorelake."
+                        ),
+                        Err(e) => {
+                            println!("! Lorelake sync notice: {e} (continuing with local cache)")
+                        }
                     }
                 }
                 "pull" => {
@@ -484,12 +520,19 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
                     println!("✓ Lorelake coordinate sync complete.");
                 }
                 _ => {
-                    println!("Lorelake lakehouse status: connected ({})", client.config.endpoint);
+                    println!(
+                        "Lorelake lakehouse status: connected ({})",
+                        client.config.endpoint
+                    );
                 }
             }
         }
 
-        Commands::Export { format, locale, output } => {
+        Commands::Export {
+            format,
+            locale,
+            output,
+        } => {
             use crate::engine::lorelake::{format_benchmark_tsv, format_huggingface_jsonl};
             let lock_path = LingoLock::resolve_path(&root);
             let lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
@@ -497,7 +540,10 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let mut map = BTreeMap::new();
             for (_, entry) in &lock.entries {
                 if let Some(loc_entry) = entry.locales.get(&locale) {
-                    map.insert(entry.canonical_text.clone(), loc_entry.translated_text.clone());
+                    map.insert(
+                        entry.canonical_text.clone(),
+                        loc_entry.translated_text.clone(),
+                    );
                 }
             }
 
@@ -508,7 +554,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
             if let Some(out_file) = output {
                 fs::write(&out_file, &rendered)?;
-                println!("✓ Exported {} translations to {}", map.len(), out_file.display());
+                println!(
+                    "✓ Exported {} translations to {}",
+                    map.len(),
+                    out_file.display()
+                );
             } else {
                 print!("{rendered}");
             }
@@ -541,7 +591,10 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 fs::create_dir_all(parent)?;
             }
             fs::write(&out_file, code)?;
-            println!("⚡ Generated zero-runtime type-safe code at {}", out_file.display());
+            println!(
+                "⚡ Generated zero-runtime type-safe code at {}",
+                out_file.display()
+            );
             println!("   Total catalog functions: {}", lock.entries.len());
         }
 
@@ -558,19 +611,34 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let mut config = LingoConfig::load_or_default(&root);
             let imports = crate::importer::detect_incumbent_systems(&root);
             if imports.is_empty() {
-                println!("! No incumbent i18n configuration files detected in {}", root.display());
+                println!(
+                    "! No incumbent i18n configuration files detected in {}",
+                    root.display()
+                );
             } else {
                 for imp in &imports {
                     if let Some(ref selected) = from {
-                        if !imp.system.name().to_lowercase().contains(&selected.to_lowercase()) {
+                        if !imp
+                            .system
+                            .name()
+                            .to_lowercase()
+                            .contains(&selected.to_lowercase())
+                        {
                             continue;
                         }
                     }
-                    println!("🔄 Importing from {} ({})", imp.system.name(), imp.config_file.display());
+                    println!(
+                        "🔄 Importing from {} ({})",
+                        imp.system.name(),
+                        imp.config_file.display()
+                    );
                     crate::importer::import_to_glossa_config(imp, &mut config);
                 }
                 let saved = config.save_to_file(&root)?;
-                println!("✓ Successfully migrated configuration to {}", saved.display());
+                println!(
+                    "✓ Successfully migrated configuration to {}",
+                    saved.display()
+                );
             }
         }
     }
@@ -586,7 +654,10 @@ fn export_locales(root: &Path, config: &LingoConfig, lock: &LingoLock) -> std::i
         let mut map = BTreeMap::new();
         for (_, entry) in &lock.entries {
             if let Some(loc_entry) = entry.locales.get(loc) {
-                map.insert(entry.canonical_text.clone(), loc_entry.translated_text.clone());
+                map.insert(
+                    entry.canonical_text.clone(),
+                    loc_entry.translated_text.clone(),
+                );
             }
         }
 
@@ -621,7 +692,10 @@ fn export_locales(root: &Path, config: &LingoConfig, lock: &LingoLock) -> std::i
             }
             "properties" => {
                 let content = resource::emit_properties(&map);
-                fs::write(locales_dir.join(format!("messages_{loc}.properties")), content)?;
+                fs::write(
+                    locales_dir.join(format!("messages_{loc}.properties")),
+                    content,
+                )?;
             }
             "xliff" | "xlf" => {
                 let content = resource::emit_xliff(&map, &config.source_locale, loc);
@@ -772,7 +846,9 @@ fn run_spbench_suite(
     let b2_start = Instant::now();
     for i in 0..b2_count {
         let t0 = Instant::now();
-        let coord = crate::ir::coord::ApeironCoord::from_str_canonical(&format!("Term #{i} in application context"));
+        let coord = crate::ir::coord::ApeironCoord::from_str_canonical(&format!(
+            "Term #{i} in application context"
+        ));
         lock.record_translation(coord, "es", format!("Término #{i}"), "spbench", 1.0);
         b2_latencies_ns.push(t0.elapsed().as_nanos() as f64);
     }
@@ -827,7 +903,10 @@ fn run_spbench_suite(
     // -------------------------------------------------------------
     let mut catalog = BTreeMap::new();
     for i in 0..500 {
-        catalog.insert(format!("key_{i}"), format!("Translated text #{i} for user {{user}}"));
+        catalog.insert(
+            format!("key_{i}"),
+            format!("Translated text #{i} for user {{user}}"),
+        );
     }
     // Repeat the whole 4-emitter bulk call to get a real distribution
     // (percentiles across repeated runs) instead of timing it once — a
@@ -896,7 +975,8 @@ fn run_spbench_suite(
             p90_us: b3_p90,
             p99_us: b3_p99,
             incumbent_baseline_us: b3_incumbent_us,
-            speedup_vs_incumbent: b3_incumbent_us / (b3_elapsed.as_micros() as f64 / b3_count as f64).max(0.0001),
+            speedup_vs_incumbent: b3_incumbent_us
+                / (b3_elapsed.as_micros() as f64 / b3_count as f64).max(0.0001),
         },
         BenchmarkResult {
             name: "Universal Emitters (JSON/YAML/PO/Fluent)".to_string(),
@@ -908,7 +988,8 @@ fn run_spbench_suite(
             p90_us: b4_p90,
             p99_us: b4_p99,
             incumbent_baseline_us: b4_incumbent_us,
-            speedup_vs_incumbent: b4_incumbent_us / (b4_elapsed.as_micros() as f64 / (2000.0 * B4_ITERATIONS as f64)).max(0.0001),
+            speedup_vs_incumbent: b4_incumbent_us
+                / (b4_elapsed.as_micros() as f64 / (2000.0 * B4_ITERATIONS as f64)).max(0.0001),
         },
     ];
 
@@ -921,25 +1002,36 @@ fn run_spbench_suite(
             subsystem: "Project Ingestion (Universal Lift)".to_string(),
             quality_fidelity: "100% Extracted (0 Parse Errors)".to_string(),
             speed_ptyktos: format!("{:.0} files/sec ({:.2} µs/file)", b1_fps, b1_mean),
-            baseline_incumbent: format!("{:.0} files/sec ({:.2} µs/file, real @babel/parser+@vue/compiler-sfc)", 1_000_000.0 / b1_incumbent_us, b1_incumbent_us),
+            baseline_incumbent: format!(
+                "{:.0} files/sec ({:.2} µs/file, real @babel/parser+@vue/compiler-sfc)",
+                1_000_000.0 / b1_incumbent_us,
+                b1_incumbent_us
+            ),
         },
         ThreeColumnRow {
             subsystem: "Coordinate Deduplication".to_string(),
             quality_fidelity: "Order-Free Monoid (0 Git Conflicts)".to_string(),
             speed_ptyktos: format!("{:.1} ns / coordinate", b2_hash_ns),
-            baseline_incumbent: format!("{:.2} µs / key (real Node.js object-merge)", b2_incumbent_us),
+            baseline_incumbent: format!(
+                "{:.2} µs / key (real Node.js object-merge)",
+                b2_incumbent_us
+            ),
         },
         ThreeColumnRow {
             subsystem: "Null-Gate Validation".to_string(),
             quality_fidelity: "100% Slot & Tag Conservation".to_string(),
             speed_ptyktos: format!("{:.0} checks/sec", b3_rate),
-            baseline_incumbent: format!("{:.0} checks/sec (real Node.js regex validator)", 1_000_000.0 / b3_incumbent_us),
+            baseline_incumbent: format!(
+                "{:.0} checks/sec (real Node.js regex validator)",
+                1_000_000.0 / b3_incumbent_us
+            ),
         },
         ThreeColumnRow {
             subsystem: "Memory Footprint (RSS)".to_string(),
             quality_fidelity: "Zero Leak (Static Lifetime)".to_string(),
             speed_ptyktos: format!("{:.1} MB RSS", rss_mb),
-            baseline_incumbent: "375.0 MB (real `npx lingo.dev@latest --version` peak RSS)".to_string(),
+            baseline_incumbent: "375.0 MB (real `npx lingo.dev@latest --version` peak RSS)"
+                .to_string(),
         },
     ];
 
@@ -957,10 +1049,18 @@ fn run_spbench_suite(
 
     // Print structured SPBench console report
     println!("\n==========================================================================================");
-    println!("                          PTYKTOS-LINGO SPBENCH PERFORMANCE SUITE                        ");
+    println!(
+        "                          PTYKTOS-LINGO SPBENCH PERFORMANCE SUITE                        "
+    );
     println!("==========================================================================================");
-    println!("OS: {} | Arch: {} | Peak Memory: {:.1} MB RSS", report.environment.os, report.environment.arch, report.environment.peak_rss_mb);
-    println!("Timestamp: {} | Engine: Glossa Sovereign Rust Engine", report.timestamp);
+    println!(
+        "OS: {} | Arch: {} | Peak Memory: {:.1} MB RSS",
+        report.environment.os, report.environment.arch, report.environment.peak_rss_mb
+    );
+    println!(
+        "Timestamp: {} | Engine: Glossa Sovereign Rust Engine",
+        report.timestamp
+    );
     println!("------------------------------------------------------------------------------------------");
     println!("BENCHMARK 1: MULTI-FRAMEWORK AST EXTRACTION (JSX, TSX & Vue SFC)");
     println!("  Processed:           {count} components ({total_extracted} terms)");
@@ -969,28 +1069,46 @@ fn run_spbench_suite(
     println!("  Latency (p50):       {:.2} µs", b1_p50);
     println!("  Latency (p90):       {:.2} µs", b1_p90);
     println!("  Latency (p99):       {:.2} µs", b1_p99);
-    println!("  Incumbent Baseline:  {:.2} µs/file (real @babel/parser + @vue/compiler-sfc measurement)", b1_incumbent_us);
+    println!(
+        "  Incumbent Baseline:  {:.2} µs/file (real @babel/parser + @vue/compiler-sfc measurement)",
+        b1_incumbent_us
+    );
     println!("  SPEEDUP:             {:.1}x FASTER", b1_speedup);
     println!("\nBENCHMARK 2: CONTENT-ADDRESSED COORDINATE CACHE & LOCKFILE MERGE");
-    println!("  Coordinate Hash:     {:.2} ns/term (Fibonacci k*Phi)", b2_hash_ns);
-    println!("  Lockfile Fuse:       {:.2} ms for {b2_count} translations", b2_elapsed.as_secs_f64() * 1000.0);
+    println!(
+        "  Coordinate Hash:     {:.2} ns/term (Fibonacci k*Phi)",
+        b2_hash_ns
+    );
+    println!(
+        "  Lockfile Fuse:       {:.2} ms for {b2_count} translations",
+        b2_elapsed.as_secs_f64() * 1000.0
+    );
     println!("  Conflict Rate:       0.0% (monoidal commutativity)");
     println!("\nBENCHMARK 3: AUTOMATED SLOT & MARKUP INTEGRITY GATE");
     println!("  Verification Rate:   {:.0} terms/sec", b3_rate);
     println!("  Integrity Score:     100.0% (0 false positives, 100% corruption caught)");
     println!("------------------------------------------------------------------------------------------");
     println!("THREE-COLUMN REG-1 VERIFICATION TABLE:");
-    println!("{:<32} | {:<25} | {:<22} | {:<25}", "Subsystem", "Quality (Fidelity)", "Speed (ptyktos)", "Baseline Incumbent");
+    println!(
+        "{:<32} | {:<25} | {:<22} | {:<25}",
+        "Subsystem", "Quality (Fidelity)", "Speed (ptyktos)", "Baseline Incumbent"
+    );
     println!("{:-<32}-+-{:-<25}-+-{:-<22}-+-{:-<25}", "", "", "", "");
     for row in &report.three_column_verification {
-        println!("{:<32} | {:<25} | {:<22} | {:<25}", row.subsystem, row.quality_fidelity, row.speed_ptyktos, row.baseline_incumbent);
+        println!(
+            "{:<32} | {:<25} | {:<22} | {:<25}",
+            row.subsystem, row.quality_fidelity, row.speed_ptyktos, row.baseline_incumbent
+        );
     }
     println!("==========================================================================================");
 
     if let Some(out_path) = json_output {
         let json_data = serde_json::to_string_pretty(&report)?;
         fs::write(&out_path, json_data)?;
-        println!("✓ Exported SPBench structured JSON report to: {}", out_path.display());
+        println!(
+            "✓ Exported SPBench structured JSON report to: {}",
+            out_path.display()
+        );
     } else if spbench {
         let json_data = serde_json::to_string_pretty(&report)?;
         println!("\n--- SPBENCH STRUCTURED JSON REPORT ---");

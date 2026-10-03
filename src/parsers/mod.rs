@@ -94,7 +94,10 @@ pub fn universal_lift(source: &str, format: SourceFormat, file_path: &str) -> Ve
 }
 
 /// Recursively scans a directory and extracts translatable items into an ApeironCatalog.
-pub fn extract_directory(root_dir: &Path, ignore_patterns: &[&str]) -> Result<ApeironCatalog, std::io::Error> {
+pub fn extract_directory(
+    root_dir: &Path,
+    ignore_patterns: &[&str],
+) -> Result<ApeironCatalog, std::io::Error> {
     let mut catalog = ApeironCatalog::new();
 
     for entry in WalkDir::new(root_dir).into_iter().filter_map(|e| e.ok()) {

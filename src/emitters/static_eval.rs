@@ -57,7 +57,9 @@ mod tests {
         let mut trans = BTreeMap::new();
         trans.insert(
             "Welcome to our platform".to_string(),
-            vec![ApeironTerm::Text("Bienvenido a nuestra plataforma".to_string())],
+            vec![ApeironTerm::Text(
+                "Bienvenido a nuestra plataforma".to_string(),
+            )],
         );
 
         let out = static_inline_source(source, &trans, crate::emitters::TargetFramework::React);
