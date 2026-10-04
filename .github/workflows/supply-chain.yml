@@ -37,12 +37,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
-      # UNPINNED ON PURPOSE: taiki-e/install-cargo-audit-action no longer
-      # exists on GitHub — repos/taiki-e/install-cargo-audit-action 404s
-      # (not a rename redirect), so there is no tag to resolve a SHA from.
-      # Left verbatim rather than inventing a SHA; see the PR description.
-      - uses: taiki-e/install-cargo-audit-action@v2
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+      # The old taiki-e/install-cargo-audit-action repo is gone (404).
+      # taiki-e/install-action is its successor; the `cargo-audit` tag of
+      # that repo is the equivalent pin (default `tool` is already
+      # cargo-audit, set explicitly here).
+      - uses: taiki-e/install-action@2f205a16b33670c6744bb9451ca070d71ad155fa # cargo-audit
+        with:
+          tool: cargo-audit
       - name: Run cargo audit (BLOCKING on vulnerabilities)
         run: cargo audit --deny warnings
 
@@ -51,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
       - name: Run cargo-deny (BLOCKING on policy violations)
         uses: EmbarkStudios/cargo-deny-action@3f4a782664881cf5725d0ffd23969fcce89fd868 # v1.6.3
 
@@ -60,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
       - name: Install cyclonedx-bom
         run: cargo install --locked cargo-cyclonedx
       - name: Generate CycloneDX SBOM
@@ -83,7 +85,7 @@ jobs:
     needs: [audit, deny, sbom]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
       - name: Build evidence payload
         run: |
           mkdir -p evidence
