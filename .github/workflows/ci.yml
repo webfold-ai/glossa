@@ -2,16 +2,20 @@ name: CI
 
 on:
   push:
+  pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   test:
     name: Build & test (real, on GitHub's own hosted runner)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
 
       # hashtrinity pulls in via a relative path dependency (../fold/hashtrinity)
       # that assumes a sibling checkout; the extracted repo is itself a
@@ -26,13 +30,25 @@ jobs:
       # hashtrinity avoids needing that private network entirely.
       # Ptyktos/hashtrinity is private. The default GITHUB_TOKEN this
       # workflow runs with is scoped only to this repo, not other private
-      # repos in the org, so cloning it needs a real cross-repo PAT.
+      # repos in the org, so fetching it needs a real cross-repo PAT.
+      #
+      # This used to be a `git clone` with the PAT interpolated into the
+      # clone URL as a basic-auth userinfo segment. That puts the secret
+      # in the process argv and in any shell tracing or CI log that echoes
+      # the command. actions/checkout takes the token as an input (masked,
+      # and never rendered into a URL) instead.
+      #
+      # `path: ../fold` puts the checkout where the old clone put it — the
+      # crate is reached through the relative path dep ../fold/hashtrinity.
+      # actions/checkout empties an existing directory before populating
+      # it, which is what the previous recursive-delete step was for.
       - name: Fetch hashtrinity dependency (from GitHub, not GitLab)
-        run: |
-          rm -rf "${GITHUB_WORKSPACE}/../fold"
-          git clone --depth 1 "https://x-access-token:${GH_CROSS_REPO_TOKEN}@github.com/Ptyktos/hashtrinity.git" "${GITHUB_WORKSPACE}/../fold"
-        env:
-          GH_CROSS_REPO_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: Ptyktos/hashtrinity
+          ref: 87e162bddee174db5d10d788fdf78df8f07cd840 # v0.1.0
+          token: ${{ secrets.GH_CROSS_REPO_TOKEN }}
+          path: ../fold
 
       - name: cargo test
         run: cargo test --verbose
@@ -46,7 +62,7 @@ jobs:
 
       - name: Upload spbench results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: spbench-results
           path: |
@@ -87,7 +103,7 @@ jobs:
 
       - name: Upload timing results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: timing-results
           path: timing-results.txt

@@ -12,8 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
+      # UNPINNED ON PURPOSE: Ptyktos/ptyktos-lingo@v1 cannot be resolved to
+      # a SHA. The repo endpoint for Ptyktos/ptyktos-lingo redirects (GitHub
+      # rename/transfer redirect) to Ptyktos/glossa, which has no tags at
+      # all, and git/ref/tags/v1 for the original path 404s. Left verbatim
+      # rather than inventing a SHA; see the PR description.
       - name: Run ptyktos-lingo CI
         uses: Ptyktos/ptyktos-lingo@v1
         with:
