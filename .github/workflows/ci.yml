@@ -38,17 +38,30 @@ jobs:
       # the command. actions/checkout takes the token as an input (masked,
       # and never rendered into a URL) instead.
       #
-      # `path: ../fold` puts the checkout where the old clone put it — the
-      # crate is reached through the relative path dep ../fold/hashtrinity.
-      # actions/checkout empties an existing directory before populating
-      # it, which is what the previous recursive-delete step was for.
+      # actions/checkout resolves `path` against GITHUB_WORKSPACE and
+      # THROWS ("Repository path ... is not under <workspace>") for anything
+      # outside it — `path: ../fold` fails before it fetches a single byte
+      # (see src/input-helper.ts in actions/checkout@v4.2.2). So check the
+      # crate out INSIDE the workspace and move it to the sibling directory
+      # the old `git clone` used, where the relative path dep
+      # ../fold/hashtrinity resolves again.
       - name: Fetch hashtrinity dependency (from GitHub, not GitLab)
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: Ptyktos/hashtrinity
           ref: 87e162bddee174db5d10d788fdf78df8f07cd840 # v0.1.0
           token: ${{ secrets.GH_CROSS_REPO_TOKEN }}
-          path: ../fold
+          path: hashtrinity-dep
+          # The token above is a cross-repo PAT; do not leave it in this
+          # second checkout's .git/config for later steps to pick up.
+          persist-credentials: false
+
+      - name: Move hashtrinity dependency to the sibling checkout path
+        run: |
+          set -euo pipefail
+          rm -rf "$GITHUB_WORKSPACE/../fold"
+          mv "$GITHUB_WORKSPACE/hashtrinity-dep" "$GITHUB_WORKSPACE/../fold"
+          test -f "$GITHUB_WORKSPACE/../fold/Cargo.toml"
 
       - name: cargo test
         run: cargo test --verbose

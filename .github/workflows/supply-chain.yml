@@ -39,10 +39,13 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
       # The old taiki-e/install-cargo-audit-action repo is gone (404).
-      # taiki-e/install-action is its successor; the `cargo-audit` tag of
-      # that repo is the equivalent pin (default `tool` is already
-      # cargo-audit, set explicitly here).
-      - uses: taiki-e/install-action@2f205a16b33670c6744bb9451ca070d71ad155fa # cargo-audit
+      # taiki-e/install-action is its successor. The previous pin was
+      # 2f205a16b33670c6744bb9451ca070d71ad155fa — that commit is the
+      # repo's `cargo-audit` TOOL tag (a rolling per-tool ref), which was
+      # what the `# cargo-audit` comment recorded; it is not a release and
+      # can move under you. Re-pinned to released tag v2.87.24
+      # (lightweight tag -> commit e407f7bafb71fd004bc5c2da3032e5470cbb6ef0).
+      - uses: taiki-e/install-action@e407f7bafb71fd004bc5c2da3032e5470cbb6ef0 # v2.87.24
         with:
           tool: cargo-audit
       - name: Run cargo audit (BLOCKING on vulnerabilities)
