@@ -37,3 +37,17 @@ walkdir = "2"
 
 [dev-dependencies]
 tempfile = "3"
+
+# Standalone workspace root, declared explicitly.
+#
+# `glossa` has no workspace of its own, so `~/projects/Cargo.toml` (the aim umbrella) claims it.
+# That is harmless in isolation but breaks anything that path-depends `glossa` *and* another
+# workspace's crate at the same time: the umbrella then becomes the root that resolves those
+# crates' `{ workspace = true }` inheritance, and it does not declare their keys. Symptom, seen
+# from three steps away in `ptyktos-api` -> `intent-agent` -> `intent-core`:
+#
+#   error inheriting `regex` from workspace root manifest's `workspace.dependencies.regex`
+#
+# That message points at intent-core's manifest and is not a bug in it. Declaring this root
+# stops the umbrella from participating in resolution.
+[workspace]

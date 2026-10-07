@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Glossa — Brag</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Space Grotesk";
+        src: url("assets/fonts/space-grotesk-latin.woff2") format("woff2");
+        font-weight: 300 700;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Space Mono";
+        src: url("assets/fonts/space-mono-latin.woff2") format("woff2");
+        font-weight: 400;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Space Mono";
+        src: url("assets/fonts/space-mono-bold.woff2") format("woff2");
+        font-weight: 700;
+        font-display: block;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #f8f8f8;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Space Grotesk", sans-serif;
+        color: #1b1b1f;
+      }
+      .scene {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f8f8;
+        padding: 0 140px;
+      }
+      #s1 {
+        opacity: 1;
+      }
+      #s2,
+      #s3,
+      #s4 {
+        opacity: 0;
+      }
+      .mono {
+        font-family: "Space Mono", monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .accent {
+        color: #0044ff;
+      }
+
+      /* Scene 1 — hook */
+      .hook {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+      .hook h1 {
+        font-size: 60px;
+        font-weight: 400;
+        line-height: 1.2;
+        letter-spacing: -0.03em;
+        margin: 0;
+        white-space: nowrap;
+      }
+      .hook h1 .w {
+        display: inline-block;
+        opacity: 0;
+        will-change: transform, opacity;
+      }
+
+      /* Scene 2 — terminal */
+      #s2 {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 18px;
+      }
+      .term-label {
+        font-size: 13px;
+        color: #666;
+      }
+      .term-card {
+        width: 100%;
+        background: #f0f0f0;
+        border: 1px solid #e2e2e2;
+        border-radius: 8px;
+        padding: 40px 44px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .term-line {
+        font-family: "Space Mono", monospace;
+        font-size: 26px;
+        white-space: nowrap;
+      }
+      .term-line .prompt {
+        color: #8a8a8a;
+        margin-right: 14px;
+      }
+      .term-line .cmd-wrap {
+        display: inline-block;
+        overflow: hidden;
+        white-space: nowrap;
+        vertical-align: bottom;
+        clip-path: inset(0 100% 0 0);
+      }
+      .term-line .cmd {
+        color: #1b1b1f;
+      }
+      .term-fail {
+        font-family: "Space Mono", monospace;
+        font-size: 20px;
+        color: #666;
+        opacity: 0;
+      }
+      .term-pass {
+        font-family: "Space Mono", monospace;
+        font-size: 22px;
+        color: #0044ff;
+        opacity: 0;
+      }
+
+      /* Scene 3 — who this is for */
+      #s3 {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 36px;
+      }
+      .stats-label {
+        font-size: 13px;
+        color: #666;
+      }
+      .world3 {
+        width: 100%;
+        transform-origin: 50% 100%;
+      }
+      .cards-row {
+        width: 100%;
+        display: flex;
+        gap: 56px;
+      }
+      .card {
+        flex: 1;
+        border-top: 3px solid #e2e2e2;
+        padding-top: 22px;
+        opacity: 0;
+        transform-origin: 50% 0%;
+      }
+      .card-tag {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 14px;
+      }
+      .card-claim {
+        font-size: 32px;
+        font-weight: 500;
+        letter-spacing: -0.015em;
+        line-height: 1.25;
+      }
+      .card-detail {
+        margin-top: 14px;
+        font-family: "Space Mono", monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        color: #727272;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      /* Scene 4 — outro */
+      #s4 {
+        background: #1b1b1f;
+        flex-direction: column;
+        gap: 22px;
+      }
+      #s4-word {
+        font-size: 128px;
+        font-weight: 400;
+        letter-spacing: -0.045em;
+        color: #f8f8f8;
+        margin: 0;
+        opacity: 0;
+        will-change: transform, filter, opacity;
+      }
+      #s4-tag {
+        font-family: "Space Mono", monospace;
+        font-size: 20px;
+        color: #f8f8f8b3;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="20" data-width="1920" data-height="1080">
+      <!-- Scene 1 — Hook -->
+      <section id="s1" class="scene" data-layout-allow-overflow="true" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">
+        <div class="hook">
+          <h1 id="s1-line1"><span class="w">your</span> <span class="w">ai</span> <span class="w">agent</span> <span class="w">just</span> <span class="w">shipped</span> <span class="w">a</span> <span class="w">translation</span> <span class="w">bug.</span></h1>
+          <h1 id="s1-line2"><span class="w">you</span> <span class="w">didn&rsquo;t</span> <span class="w">catch</span> <span class="w">it.</span> <span class="w">glossa</span> <span class="w">did.</span></h1>
+        </div>
+      </section>
+
+      <!-- Scene 2 — Terminal -->
+      <section id="s2" class="scene" data-layout-allow-overflow="true" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">
+        <div class="term-label mono">one gate. every ai-generated pr.</div>
+        <div class="term-card">
+          <div class="term-line">
+            <span class="prompt">$</span
+            ><span class="cmd-wrap" id="s2-wrap1"><span class="cmd">curl -fsSL https://ptyktos.com/install.sh | bash</span></span>
+          </div>
+          <div class="term-line">
+            <span class="prompt">$</span
+            ><span class="cmd-wrap" id="s2-wrap2"><span class="cmd">glossa init --locales es,fr,de,ja</span></span>
+          </div>
+          <div class="term-line">
+            <span class="prompt">$</span
+            ><span class="cmd-wrap" id="s2-wrap3"><span class="cmd">glossa extract && glossa check --ci</span></span>
+          </div>
+          <div class="term-fail" id="s2-fail">&#10007; es.json:42 &mdash; missing {count} (agent-generated)</div>
+          <div class="term-pass" id="s2-pass">&#10003; auto-caught &amp; fixed &mdash; 0 regressions, 61 suites green</div>
+        </div>
+      </section>
+
+      <!-- Scene 3 — Who this is for -->
+      <section id="s3" class="scene" data-layout-allow-overflow="true" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">
+        <div class="stats-label mono">who this is built for</div>
+        <div class="world3" id="s3-world">
+          <div class="cards-row">
+            <div class="card" id="s3-c1">
+              <div class="card-tag mono">for ai-coding teams</div>
+              <div class="card-claim">catches what your agent missed.</div>
+              <div class="card-detail">dropped variables &amp; corrupted tags &mdash; rejected in 1.8&micro;s, before merge</div>
+            </div>
+            <div class="card" id="s3-c2">
+              <div class="card-tag mono">for startups</div>
+              <div class="card-claim">85% cheaper to ship in 4 languages.</div>
+              <div class="card-detail">zero-dependency 7.9&nbsp;MB binary &mdash; no seats, no SaaS bill</div>
+            </div>
+            <div class="card" id="s3-c3">
+              <div class="card-tag mono">for agencies</div>
+              <div class="card-claim">zero git merge conflicts.</div>
+              <div class="card-detail">one gate across react, vue, svelte, swift, flutter</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 4 — Outro -->
+      <section id="s4" class="scene" data-layout-allow-overflow="true" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">
+        <h1 id="s4-word">Glossa.</h1>
+        <div id="s4-tag">universal sovereign localization engine.</div>
+      </section>
+
+      <!-- Audio: foley only — no music bed -->
+      <audio id="sfx-hook-glitch" src="assets/sfx/glitch_002.ogg" data-start="0.9" data-duration="0.03" data-track-index="1" data-volume="0.5"></audio>
+
+      <audio id="keytap1" src="assets/sfx/keypress-a.wav" data-start="3.8" data-duration="0.3" data-track-index="2" data-volume="0.22"></audio>
+      <audio id="keytap2" src="assets/sfx/keypress-b.wav" data-start="5.1" data-duration="0.3" data-track-index="3" data-volume="0.22"></audio>
+      <audio id="keytap3" src="assets/sfx/keypress-c.wav" data-start="6.4" data-duration="0.3" data-track-index="4" data-volume="0.22"></audio>
+
+      <audio id="sfx-fail" src="assets/sfx/error_005.ogg" data-start="7.4" data-duration="0.5" data-track-index="5" data-volume="0.4"></audio>
+      <audio id="sfx-pass" src="assets/sfx/impactGeneric_light_000.ogg" data-start="8.3" data-duration="0.14" data-track-index="5" data-volume="0.45"></audio>
+
+      <audio id="stamp1" src="assets/sfx/impactGeneric_light_000.ogg" data-start="9.8" data-duration="0.14" data-track-index="2" data-volume="0.4"></audio>
+      <audio id="stamp2" src="assets/sfx/impactGeneric_light_000.ogg" data-start="11.5" data-duration="0.14" data-track-index="2" data-volume="0.4"></audio>
+      <audio id="stamp3" src="assets/sfx/impactGeneric_light_000.ogg" data-start="13.4" data-duration="0.14" data-track-index="2" data-volume="0.4"></audio>
+
+      <audio id="stamp-outro" src="assets/sfx/impactGeneric_light_000.ogg" data-start="16.7" data-duration="0.14" data-track-index="5" data-volume="0.45"></audio>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const F = 1 / 60;
+
+      // Kinetic word-cascade — waterfall-entry pattern (hyperframes-animation/rules/waterfall-entry.md)
+      function wordCascade(containerSel, t0) {
+        const words = document.querySelectorAll(containerSel + " .w");
+        let t = t0;
+        words.forEach((el, i) => {
+          const isFirst = i === 0;
+          const isLast = i === words.length - 1;
+          const offset = isFirst ? 70 : isLast ? 36 : 46;
+          const dur = isFirst ? 0.19 : isLast ? 0.12 : 0.15;
+          tl.set(el, { opacity: 1, y: offset }, t);
+          tl.to(el, { y: 0, duration: dur, ease: "power4.out" }, t);
+          t = t + dur - F;
+        });
+        return t;
+      }
+
+      // ---------------- Scene 1 — hook (kinetic word cascade) ----------------
+      wordCascade("#s1-line1", 0.1);
+      wordCascade("#s1-line2", 1.7);
+
+      // ---------------- Transition: s1 -> s2 (vertical push, medium energy) ----------------
+      const T1 = 3.5;
+      tl.to("#s1", { y: -1080, duration: 0.45, ease: "power3.inOut" }, T1);
+      tl.fromTo("#s2", { y: 1080, opacity: 1 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.inOut" }, T1);
+
+      // ---------------- Scene 2 — terminal ----------------
+      const T = 3.5;
+      tl.fromTo(
+        "#s2-wrap1",
+        { clipPath: "inset(0 100% 0 0)" },
+        { clipPath: "inset(0 0% 0 0)", duration: 0.9, ease: "steps(18)" },
+        T + 0.3,
+      );
+      tl.fromTo(
+        "#s2-wrap2",
+        { clipPath: "inset(0 100% 0 0)" },
+        { clipPath: "inset(0 0% 0 0)", duration: 0.7, ease: "steps(14)" },
+        T + 1.6,
+      );
+      tl.fromTo(
+        "#s2-wrap3",
+        { clipPath: "inset(0 100% 0 0)" },
+        { clipPath: "inset(0 0% 0 0)", duration: 0.8, ease: "steps(16)" },
+        T + 2.9,
+      );
+      tl.fromTo("#s2-fail", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, T + 3.9);
+      tl.fromTo("#s2-pass", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, T + 4.8);
+
+      // ---------------- Transition: s2 -> s3 (focus pull, depth-of-field) ----------------
+      const T2 = 9.5;
+      tl.to("#s2", { filter: "blur(15px)", duration: 0.5, ease: "power1.in" }, T2);
+      tl.to("#s2", { opacity: 0, duration: 0.3, ease: "power2.in" }, T2 + 0.25);
+      tl.fromTo("#s3", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, T2 + 0.25);
+
+      // ---------------- Scene 3 — three ICP cards, small confident overshoot + slow camera push-in ----------------
+      const M = 9.5;
+      tl.fromTo("#s3-world", { scale: 1 }, { scale: 1.035, duration: 7, ease: "none" }, M);
+      tl.fromTo("#s3-c1", { opacity: 0, y: 26, scale: 0.92 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.3)" }, M + 0.3);
+      tl.fromTo("#s3-c2", { opacity: 0, y: 26, scale: 0.92 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.3)" }, M + 2.0);
+      tl.fromTo("#s3-c3", { opacity: 0, y: 26, scale: 0.92 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.3)" }, M + 3.9);
+
+      // ---------------- Transition: s3 -> s4 (blur crossfade, calm wind-down) ----------------
+      const T3 = 16.5;
+      tl.to("#s3", { filter: "blur(20px)", scale: 1.04, duration: 0.5, ease: "power2.inOut" }, T3);
+      tl.to("#s3", { opacity: 0, duration: 0.3, ease: "power1.in" }, T3 + 0.3);
+      tl.fromTo(
+        "#s4",
+        { filter: "blur(16px)", scale: 0.97, opacity: 0 },
+        { filter: "blur(0px)", scale: 1, opacity: 1, duration: 0.5, ease: "power2.inOut" },
+        T3 + 0.1,
+      );
+
+      // ---------------- Scene 4 — outro: blur-to-focus reveal (Apple depth-of-field entrance) ----------------
+      const O = 16.5;
+      tl.fromTo(
+        "#s4-word",
+        { opacity: 0, y: 16, scale: 0.97, filter: "blur(10px)" },
+        { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", duration: 0.6, ease: "power3.out" },
+        O + 0.25,
+      );
+      tl.fromTo("#s4-tag", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, O + 1.0);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

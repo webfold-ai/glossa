@@ -1,0 +1,1 @@
+Glossa: a 7.9 MB, zero-dependency Rust binary that replaces Lingo.dev, Tolgee, Inlang, and Crowdin. 4.8× faster extraction (measured), 8.3 MB idle RSS, 0.0% regressions across 61 test suites.
