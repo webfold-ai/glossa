@@ -26,7 +26,14 @@ jobs:
       - name: Install caretakers-bump
         # The org repo is Ptyktos/caretaker (singular). The old
         # Ptyktos/caretakers path 404s, so this install always failed.
-        run: cargo install --locked --git https://github.com/Ptyktos/caretaker caretakers-bump
+        # `cargo install <git-url> <PKG>` takes the PACKAGE name, not the
+        # binary name: in Ptyktos/caretaker the package is `caretaker-bump`
+        # and its [[bin]] is `caretakers-bump` (confirmed via
+        # `gh api repos/Ptyktos/caretaker/contents/caretaker-bump/Cargo.toml`).
+        # Passing the binary name made cargo fail with "package ID specification
+        # `caretakers-bump` did not match any packages"; the later steps below
+        # still invoke the installed BINARY, `caretakers-bump`, which is correct.
+        run: cargo install --locked --git https://github.com/Ptyktos/caretaker caretaker-bump
       - name: Run caretakers-bump plan
         run: caretakers-bump plan --json --range HEAD > /tmp/plan.json
       - name: Show plan

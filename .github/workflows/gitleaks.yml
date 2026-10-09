@@ -28,4 +28,36 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+      # gitleaks/gitleaks-action is a licensed third-party wrapper: for
+      # organisation-owned repositories it requires a GITLEAKS_LICENSE
+      # secret, and this org has none, so the job failed before scanning
+      # anything. The CLI is free and needs no licence, so install it
+      # directly from a pinned, checksum-verified release instead:
+      #   version: v8.30.1  (released 2026-03-21, latest non-prerelease)
+      #   sha256 : 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+      #   taken from gitleaks_8.30.1_checksums.txt in that same release.
+      # Subcommand: `gitleaks git` is the history scan at this version
+      # (`git` was introduced in 8.19; the older `detect` is the
+      # pre-8.19 alias and is not what the 8.30 docs use).
+      - name: Install pinned gitleaks CLI (checksum-verified)
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        run: |
+          set -euo pipefail
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          curl -fsSL --retry 3 -o "$tarball" "$base/$tarball"
+          curl -fsSL --retry 3 -o checksums.txt "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          # The hard-coded digest must be the one the release publishes...
+          grep -F "  ${tarball}" checksums.txt | grep -qF "$GITLEAKS_SHA256"
+          # ...and the bytes we actually downloaded must match it.
+          echo "${GITLEAKS_SHA256}  ${tarball}" | sha256sum --check --strict
+          tar -xzf "$tarball" gitleaks
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Scan full git history for secrets
+        run: |
+          set -euo pipefail
+          gitleaks git . --redact --verbose --no-banner --exit-code 1

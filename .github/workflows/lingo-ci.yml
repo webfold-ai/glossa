@@ -14,13 +14,18 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      # UNPINNED ON PURPOSE: Ptyktos/ptyktos-lingo@v1 cannot be resolved to
-      # a SHA. The repo endpoint for Ptyktos/ptyktos-lingo redirects (GitHub
-      # rename/transfer redirect) to Ptyktos/glossa, which has no tags at
-      # all, and git/ref/tags/v1 for the original path 404s. Left verbatim
-      # rather than inventing a SHA; see the PR description.
-      - name: Run ptyktos-lingo CI
-        uses: Ptyktos/ptyktos-lingo@v1
+      # The action this workflow wants IS this repository's own root-level
+      # `action.yml` (a composite action: extract -> translate -> check, with
+      # exactly the provider / api-key / fail-on-missing inputs used below).
+      # The old `Ptyktos/ptyktos-lingo@v1` could never be pinned: the repo path
+      # redirects (GitHub transfer/rename) to Ptyktos/glossa, which has NO
+      # tags at all (`gh api repos/Ptyktos/ptyktos-lingo/tags` -> []), so
+      # there is no 40-char SHA behind `@v1` to pin and no version comment
+      # that would survive audit. Referencing the local action (`./`) keeps
+      # the workflow on the code in this same commit, needs no SHA pin by
+      # construction, and cannot drift from the checked-out source.
+      - name: Run ptyktos-lingo CI (this repo's own composite action)
+        uses: ./
         with:
           fail-on-missing: "true"
           provider: "openai"
