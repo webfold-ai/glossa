@@ -8,31 +8,24 @@ jobs:
   test:
     name: Build & test (real, on GitHub's own hosted runner)
     runs-on: ubuntu-latest
+    env:
+      GH_CROSS_REPO_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
 
-      # hashtrinity pulls in via a relative path dependency (../fold/hashtrinity)
-      # that assumes a sibling checkout; the extracted repo is itself a
-      # workspace whose real package lives one level deeper
-      # (hashtrinity/hashtrinity/). GitHub's Ptyktos/hashtrinity and GitLab's
-      # twn/ptyktos/hashtrinity have DIVERGED: GitLab's declares an
-      # `apeiron = { git = "https://gitlab.tas.twn.network/lucas/apeiron.git" }`
-      # dependency that GitHub's copy doesn't have at all (confirmed by
-      # reading both Cargo.toml files directly) -- and gitlab.tas.twn.network
-      # is an internal/VPN-only host public GitHub runners can't route to at
-      # all (TLS handshake fails, not an auth failure). Using GitHub's
-      # hashtrinity avoids needing that private network entirely.
-      # Ptyktos/hashtrinity is private. The default GITHUB_TOKEN this
-      # workflow runs with is scoped only to this repo, not other private
-      # repos in the org, so cloning it needs a real cross-repo PAT.
-      - name: Fetch hashtrinity dependency (from GitHub, not GitLab)
+      # hashtrinity (and its apeiron dependency) are private GitHub repos pinned by rev in
+      # Cargo.toml / Cargo.lock; cargo fetches them directly. The default GITHUB_TOKEN is scoped
+      # to this repo only, so a credential helper supplies the cross-repo token for github.com.
+      # The helper reads GH_CROSS_REPO_TOKEN from the environment each time git calls it, so the
+      # secret is never written to git config or to a URL. (GitLab's hashtrinity copy has diverged
+      # and is VPN-only; nothing in the graph reaches it any more.)
+      - name: Let git authenticate to private Ptyktos repos without storing the token
         run: |
-          rm -rf "${GITHUB_WORKSPACE}/../fold"
-          git clone --depth 1 "https://x-access-token:${GH_CROSS_REPO_TOKEN}@github.com/Ptyktos/hashtrinity.git" "${GITHUB_WORKSPACE}/../fold"
-        env:
-          GH_CROSS_REPO_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
+          git config --global credential.https://github.com.helper \
+            '!f() { echo username=x-access-token; echo "password=${GH_CROSS_REPO_TOKEN}"; }; f'
+          echo "CARGO_NET_GIT_FETCH_WITH_CLI=true" >> "$GITHUB_ENV"
 
       - name: cargo test
         run: cargo test --verbose
