@@ -65,8 +65,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
       - name: Install cyclonedx-bom
         run: cargo install --locked cargo-cyclonedx
+      # cargo-cyclonedx resolves the dependency graph, which includes private Ptyktos git
+      # dependencies (hashtrinity, apeiron). The helper reads the token from the environment of
+      # the step that runs cargo; nothing is written to git config, a URL or argv.
+      - name: Let git authenticate to private Ptyktos repos without storing the token
+        run: |
+          git config --global credential.https://github.com.helper \
+            '!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=${GH_CROSS_REPO_TOKEN}"; }; f'
+          echo "CARGO_NET_GIT_FETCH_WITH_CLI=true" >> "$GITHUB_ENV"
       - name: Generate CycloneDX SBOM
         run: cargo cyclonedx --format json --override-filename glossa.sbom.json
+        env:
+          GH_CROSS_REPO_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

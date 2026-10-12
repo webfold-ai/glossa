@@ -17,49 +17,35 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
 
-      # hashtrinity pulls in via a relative path dependency (../fold/hashtrinity)
-      # that assumes a sibling checkout; the extracted repo is itself a
-      # workspace whose real package lives one level deeper
-      # (hashtrinity/hashtrinity/). GitHub's Ptyktos/hashtrinity and GitLab's
-      # twn/ptyktos/hashtrinity have DIVERGED: GitLab's declares an
-      # `apeiron = { git = "https://gitlab.tas.twn.network/lucas/apeiron.git" }`
-      # dependency that GitHub's copy doesn't have at all (confirmed by
-      # reading both Cargo.toml files directly) -- and gitlab.tas.twn.network
-      # is an internal/VPN-only host public GitHub runners can't route to at
-      # all (TLS handshake fails, not an auth failure). Using GitHub's
-      # hashtrinity avoids needing that private network entirely.
-      # Ptyktos/hashtrinity is private. The default GITHUB_TOKEN this
-      # workflow runs with is scoped only to this repo, not other private
-      # repos in the org, so fetching it needs a real cross-repo PAT.
-      #
-      # This used to be a `git clone` with the PAT interpolated into the
-      # clone URL as a basic-auth userinfo segment. That puts the secret
-      # in the process argv and in any shell tracing or CI log that echoes
-      # the command. actions/checkout takes the token as an input (masked,
-      # and never rendered into a URL) instead.
-      #
-      # `path: ../fold` puts the checkout where the old clone put it — the
-      # crate is reached through the relative path dep ../fold/hashtrinity.
-      # actions/checkout empties an existing directory before populating
-      # it, which is what the previous recursive-delete step was for.
-      - name: Fetch hashtrinity dependency (from GitHub, not GitLab)
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: Ptyktos/hashtrinity
-          ref: 87e162bddee174db5d10d788fdf78df8f07cd840 # v0.1.0
-          token: ${{ secrets.GH_CROSS_REPO_TOKEN }}
-          path: ../fold
+      # hashtrinity (and its apeiron dependency) are private GitHub repos pinned by rev in
+      # Cargo.toml / Cargo.lock; cargo fetches them directly, so no sibling checkout is needed.
+      # The default GITHUB_TOKEN is scoped to this repo only, so a credential helper supplies the
+      # cross-repo token for github.com. The helper reads GH_CROSS_REPO_TOKEN from the environment
+      # each time git calls it, so the secret is never written to git config, a URL or argv, and
+      # it is passed only to the steps that run cargo (not to the whole job). GitLab's hashtrinity
+      # copy has diverged and is VPN-only; nothing in the graph reaches it any more.
+      - name: Let git authenticate to private Ptyktos repos without storing the token
+        run: |
+          git config --global credential.https://github.com.helper \
+            '!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=${GH_CROSS_REPO_TOKEN}"; }; f'
+          echo "CARGO_NET_GIT_FETCH_WITH_CLI=true" >> "$GITHUB_ENV"
 
       - name: cargo test
         run: cargo test --verbose
+        env:
+          GH_CROSS_REPO_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
 
       - name: cargo build --release
         run: cargo build --release --bin glossa
+        env:
+          GH_CROSS_REPO_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
 
       - name: SPBench suite — regenerate fresh, in this same environment
         run: |
           cargo run --release --bin glossa -- bench --spbench --json-output spbench-results.json | tee spbench-console.txt
 
+        env:
+          GH_CROSS_REPO_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
       - name: Upload spbench results
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

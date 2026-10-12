@@ -23,7 +23,10 @@ name = "glossa"
 path = "src/lib.rs"
 
 [dependencies]
-hashtrinity = { git = "https://gitlab.tas.twn.network/twn/ptyktos/hashtrinity.git" }
+# GitHub pin, identical to the one webfold/transport/superdocuments use: one hashtrinity SourceId for the
+# whole graph, otherwise a consumer that links glossa and webfold gets two crates (E0308). The GitLab
+# copy has diverged and is unreachable from public runners.
+hashtrinity = { git = "https://github.com/Ptyktos/hashtrinity", rev = "2c36b995c82c073c71df7c28b14c62665d62cbf0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 clap = { version = "4", features = ["derive"] }
