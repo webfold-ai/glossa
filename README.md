@@ -1,6 +1,6 @@
 # Glossa (`glossa`)
 
-> **Universal Sovereign Localization Engine & CI/CD Verification Platform.**  
+> **Universal Localization Engine**  
 > 4.8× faster extraction, ~45× lower memory drop-in replacement for [Lingo.dev](https://github.com/lingodotdev/lingo.dev), [Inlang](https://inlang.com), [Tolgee](https://tolgee.io), and [Crowdin](https://crowdin.com).  
 > Built in pure, zero-dependency Rust in the universal cross-framework spirit of **Mitosis**.
 >
