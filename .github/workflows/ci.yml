@@ -17,35 +17,16 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
 
-      # hashtrinity (and its apeiron dependency) are private GitHub repos pinned by rev in
-      # Cargo.toml / Cargo.lock; cargo fetches them directly, so no sibling checkout is needed.
-      # The default GITHUB_TOKEN is scoped to this repo only, so a credential helper supplies the
-      # cross-repo token for github.com. The helper reads GH_CROSS_REPO_TOKEN from the environment
-      # each time git calls it, so the secret is never written to git config, a URL or argv, and
-      # it is passed only to the steps that run cargo (not to the whole job). GitLab's hashtrinity
-      # copy has diverged and is VPN-only; nothing in the graph reaches it any more.
-      - name: Let git authenticate to private Ptyktos repos without storing the token
-        run: |
-          git config --global credential.https://github.com.helper \
-            '!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=${GH_CROSS_REPO_TOKEN}"; }; f'
-          echo "CARGO_NET_GIT_FETCH_WITH_CLI=true" >> "$GITHUB_ENV"
-
       - name: cargo test
         run: cargo test --verbose
-        env:
-          GH_CROSS_REPO_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
 
       - name: cargo build --release
         run: cargo build --release --bin glossa
-        env:
-          GH_CROSS_REPO_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
 
       - name: SPBench suite — regenerate fresh, in this same environment
         run: |
           cargo run --release --bin glossa -- bench --spbench --json-output spbench-results.json | tee spbench-console.txt
 
-        env:
-          GH_CROSS_REPO_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
       - name: Upload spbench results
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
