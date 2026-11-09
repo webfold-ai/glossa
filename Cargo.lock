@@ -73,7 +73,10 @@ dependencies = [
 [[package]]
 name = "apeiron"
 version = "0.1.0"
-source = "git+https://github.com/Ptyktos/apeiron.git?rev=a2b50938679888cba22e5174e8dce92dfb6414cc#a2b50938679888cba22e5174e8dce92dfb6414cc"
+source = "git+https://github.com/webfold-ai/apeiron?rev=d0eda3226193542949306f767d7280404921546f#d0eda3226193542949306f767d7280404921546f"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "async-trait"
@@ -421,12 +424,9 @@ checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 [[package]]
 name = "hashtrinity"
 version = "0.1.0"
-source = "git+https://github.com/Ptyktos/hashtrinity?rev=2c36b995c82c073c71df7c28b14c62665d62cbf0#2c36b995c82c073c71df7c28b14c62665d62cbf0"
+source = "git+https://github.com/Ptyktos/hashtrinity?rev=f74bc22288faa08625637ee810977cd0064e11e5#f74bc22288faa08625637ee810977cd0064e11e5"
 dependencies = [
  "apeiron",
- "rustls",
- "serde",
- "serde_json",
 ]
 
 [[package]]
