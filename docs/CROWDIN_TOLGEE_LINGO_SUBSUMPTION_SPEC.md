@@ -12,7 +12,7 @@ This specification details the end-to-end architecture enabling Glossa to achiev
 2. **Tolgee**: Bi-directional in-context visual translation overlay SDK (Alt+Click on DOM elements), zero-reload translation updates, and open translation memory.
 3. **Lingo.dev**: Automated translation quality scoring in unread languages (MTQE/MQM), customizable scorecards, root-cause error attribution (model vs. context vs. rule vs. glossary), longitudinal edit rate/distance tracking, rule auto-induction from human edits, and retrieval-augmented localization (RAL) with multi-LLM routing.
 
-Licensed under **Functional Source License 1.1 (FSL-1.1-ALv2)**, Glossa prevents hyperscaler cloud wrapping while offering zero-friction internal developer adoption, culminating in automatic conversion to Apache-2.0 on September 15, 2028.
+Licensed under **Apache-2.0**, Glossa offers zero-friction adoption for internal and commercial use alike.
 
 ---
 

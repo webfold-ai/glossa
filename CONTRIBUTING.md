@@ -44,4 +44,4 @@ Do not report vulnerabilities in public issues or pull requests. Follow
 ## License
 
 By contributing, you agree that your contribution is offered under the
-repository's FSL-1.1-ALv2 license.
+repository's Apache-2.0 license.

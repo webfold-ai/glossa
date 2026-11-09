@@ -3,7 +3,7 @@ name = "glossa"
 version = "0.1.0"
 edition = "2021"
 description = "Universal sovereign multi-framework localization compiler and CI/CD verification engine. Measured 4.8x-12.6x faster, ~45x lower memory drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin."
-license = "FSL-1.1-ALv2"
+license = "Apache-2.0"
 repository = "https://github.com/Ptyktos/glossa"
 
 [[bin]]
@@ -26,7 +26,7 @@ path = "src/lib.rs"
 # GitHub pin, identical to the one webfold/transport/superdocuments use: one hashtrinity SourceId for the
 # whole graph, otherwise a consumer that links glossa and webfold gets two crates (E0308). The GitLab
 # copy has diverged and is unreachable from public runners.
-hashtrinity = { git = "https://github.com/Ptyktos/hashtrinity", rev = "f74bc22288faa08625637ee810977cd0064e11e5" }
+hashtrinity = { git = "https://github.com/Ptyktos/hashtrinity", rev = "2c36b995c82c073c71df7c28b14c62665d62cbf0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 clap = { version = "4", features = ["derive"] }
