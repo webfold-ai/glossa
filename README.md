@@ -6,9 +6,9 @@
 >
 > *Measured against real incumbent tooling (`@babel/parser` + `@vue/compiler-sfc` for extraction, `npx lingo.dev@latest` for memory), regenerated fresh on every CI run — see [Empirical Benchmarks: SPBench Suite](#empirical-benchmarks-spbench-suite) below.*
 
-[![CI](https://github.com/Ptyktos/glossa/actions/workflows/ci.yml/badge.svg)](https://github.com/Ptyktos/glossa/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Binary Size](https://img.shields.io/badge/binary%20size-7.9%20MB-brightgreen.svg)](https://github.com/Ptyktos/glossa)
+[![CI](https://github.com/webfold-ai/glossa/actions/workflows/ci.yml/badge.svg)](https://github.com/webfold-ai/glossa/actions)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![Binary Size](https://img.shields.io/badge/binary%20size-7.9%20MB-brightgreen.svg)](https://github.com/webfold-ai/glossa)
 [![Throughput](https://img.shields.io/badge/throughput-~57%2C000%20files%2Fsec-orange.svg)](docs/SWOT_ANALYSIS.md)
 [![Zero Regression](https://img.shields.io/badge/regression%20rate-0.0%25-brightgreen.svg)](tests/zero_regression_proof.rs)
 
@@ -168,4 +168,4 @@ glossa lorelake push --bucket translations
 
 ## License
 
-MIT OR Apache-2.0. Copyright (c) 2026 Ptyktos Team.
+Apache-2.0. See [LICENSE](LICENSE).
