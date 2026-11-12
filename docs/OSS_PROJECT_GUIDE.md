@@ -86,7 +86,7 @@ Add the following section to your project's `CONTRIBUTING.md`:
 ```markdown
 ## Internationalization (i18n)
 
-This repository uses [Glossa](https://github.com/Ptyktos/glossa) for high-speed, multi-framework localization.
+This repository uses [Glossa](https://github.com/webfold-ai/glossa) for high-speed, multi-framework localization.
 
 ### Writing Code with Text
 When adding or modifying user-facing text:

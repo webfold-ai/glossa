@@ -59,7 +59,7 @@ You do not need to rewrite your workflow. Glossa provides:
 
 Hey HN!
 
-We're open-sourcing Glossa (https://github.com/Ptyktos/glossa), a universal sovereign localization engine written in pure Rust.
+We're open-sourcing Glossa (https://github.com/webfold-ai/glossa), a universal sovereign localization engine written in pure Rust.
 
 Like many of you, we loved the idea of AI-driven, developer-native localization popularized by Lingo.dev—continuous string extraction, lockfile diffing, and automated delta translation. But in practice, we ran into three walls:
 1. **Performance & Memory**: The Node.js/Babel toolchain measures at ~84 µs per file to parse, and the CLI itself carries a measured 375 MB peak RSS, bogging down CI.
@@ -125,7 +125,7 @@ Try Glossa today in 3 lines:
 `glossa init --locales es,fr,de`  
 `glossa extract && glossa check --ci`  
 
-GitHub: https://github.com/Ptyktos/glossa  
+GitHub: https://github.com/webfold-ai/glossa  
 Let us know what you think! 🌐🦀
 
 ---
@@ -144,7 +144,7 @@ We built Glossa with zero external Node dependencies:
 - Memory footprint measured at 8.3 MB RSS, running at 17.6 µs per file (measured).
 - Commutative monoid lockfile merging ensures parallel Git branches never conflict.
 - Compiles down to zero-runtime type-safe Rust and TypeScript message accessors.
-Feedback and code reviews on our IR design are welcome: https://github.com/Ptyktos/glossa
+Feedback and code reviews on our IR design are welcome: https://github.com/webfold-ai/glossa
 
 ---
 
