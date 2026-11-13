@@ -51,10 +51,9 @@ allow = [
     "CC0-1.0",
     "OpenSSL",
     "Unlicense",
-    "FSL-1.1-ALv2", # Functional Source License — Ptyktos substrate (memoryfold,
-                    # modelfold, etc.) is FSL-1.1-Apache-2.0. After 2 years
-                    # each FSL release converts to Apache-2.0; safe to ship
-                    # Ptyktos substrate as binaries while still under FSL.
+    "FSL-1.1-ALv2", # Legacy: older pinned revisions of the Ptyktos substrate (modelfold,
+                    # memoryfold, the engine) were FSL-1.1-ALv2 before the Apache-2.0
+                    # relicense of 2026-11. Remove once no pinned revision predates it.
 ]
 confidence-threshold = 0.93
 

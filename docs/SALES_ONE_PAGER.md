@@ -76,4 +76,4 @@ glossa init --locales es,fr,de,ja
 glossa extract && glossa check --ci
 ```
 
-*For enterprise inquiries, private VPC deployment, or custom POCs: **enterprise@ptyktos.com** | **https://github.com/Ptyktos/glossa***
+*For enterprise inquiries, private VPC deployment, or custom POCs: **enterprise@ptyktos.com** | **https://github.com/webfold-ai/glossa***
