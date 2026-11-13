@@ -71,11 +71,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "apeiron"
-version = "0.1.0"
-source = "git+https://github.com/Ptyktos/apeiron.git?rev=a2b50938679888cba22e5174e8dce92dfb6414cc#a2b50938679888cba22e5174e8dce92dfb6414cc"
-
-[[package]]
 name = "async-trait"
 version = "0.1.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -382,7 +377,6 @@ dependencies = [
  "async-trait",
  "chrono",
  "clap",
- "hashtrinity",
  "regex",
  "reqwest",
  "serde",
@@ -417,17 +411,6 @@ name = "hashbrown"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
-
-[[package]]
-name = "hashtrinity"
-version = "0.1.0"
-source = "git+https://github.com/Ptyktos/hashtrinity?rev=2c36b995c82c073c71df7c28b14c62665d62cbf0#2c36b995c82c073c71df7c28b14c62665d62cbf0"
-dependencies = [
- "apeiron",
- "rustls",
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "heck"
