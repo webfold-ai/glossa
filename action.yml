@@ -1,13 +1,13 @@
-name: "Glossa Universal Localization CI/CD"
-description: "Sovereign multi-framework localization verification and translation engine (measured 4.8x-12.6x faster, ~45x lower memory drop-in replacement for Lingo.dev)"
-author: "Ptyktos"
+name: "Glossa"
+description: "Extract translatable strings, optionally translate missing entries, and fail the job if translations are missing."
+author: "webfold-ai"
 branding:
   icon: "globe"
   color: "blue"
 
 inputs:
   provider:
-    description: "AI translation provider (ptyktos-api, openai, anthropic, deepseek, ollama, offline)"
+    description: "AI translation provider (openai, anthropic, deepseek, ollama, offline)"
     required: false
     default: "offline"
   api-key:
@@ -30,18 +30,17 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Download & Cache Glossa Binary
+    - name: Install Glossa
       shell: bash
       run: |
-        echo "⚡ Running Glossa CI Action..."
         if ! command -v glossa &> /dev/null && ! command -v lingo &> /dev/null; then
-          if [ -f "/home/ctown/projects/glossa/target/release/glossa" ]; then
-            sudo cp /home/ctown/projects/glossa/target/release/glossa /usr/local/bin/glossa
-            sudo ln -sf /usr/local/bin/glossa /usr/local/bin/lingo
-          elif [ -f "/home/ctown/projects/ptyktos-lingo/target/release/glossa" ]; then
-            sudo cp /home/ctown/projects/ptyktos-lingo/target/release/glossa /usr/local/bin/glossa
-            sudo ln -sf /usr/local/bin/glossa /usr/local/bin/lingo
+          if ! command -v cargo &> /dev/null; then
+            echo "::error::glossa is not on PATH and cargo is not available to install it. Install glossa before this step."
+            exit 1
           fi
+          cargo install --locked --git https://github.com/webfold-ai/glossa glossa
+          export PATH="$HOME/.cargo/bin:$PATH"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
         fi
 
     - name: Extract Translatable Strings
@@ -69,7 +68,7 @@ runs:
         $CMD translate --provider ${{ inputs.provider }} $LOCALES_FLAG
         $CMD sync
 
-    - name: Verify 100% Localization Coverage & Null-Gate Check
+    - name: Check translation coverage
       shell: bash
       run: |
         CMD="glossa"

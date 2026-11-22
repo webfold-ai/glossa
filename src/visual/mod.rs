@@ -1,7 +1,7 @@
 //! In-Context Visual Mode & Live Translation Editor Server.
 //!
-//! Absorbs Tolgee's core strength: visual in-context editing directly on the running web page.
-//! Spawns a lightweight local HTTP daemon on `http://127.0.0.1:3920` with 0 external dependencies.
+//! Visual in-context editing on the running web page.
+//! Spawns a local HTTP server on `http://127.0.0.1:3920` (default port) built on the standard library.
 //! Allows developers to inspect Apeiron coordinates, test translations, and persist edits live.
 
 use crate::lockfile::LingoLock;
@@ -95,7 +95,7 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Glossa Sovereign In-Context Studio</title>
+    <title>Glossa In-Context Studio</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 2rem; }
         h1 { color: #38bdf8; display: flex; align-items: center; gap: 0.5rem; }

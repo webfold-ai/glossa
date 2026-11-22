@@ -1,8 +1,9 @@
-//! In-Memory Pre-LLM PII Anonymizer & Typed Placeholder Restorer.
+//! PII placeholder substitution applied before text is sent to a translation provider.
 //!
 //! Replaces sensitive personal data (emails, phone numbers, IP addresses, credit cards)
 //! with typed placeholders (e.g., `{{GLOSSA_PII_EMAIL_1}}`) before sending to translation
-//! providers, ensuring 100% data sovereignty and GDPR/HIPAA compliance.
+//! providers, so those values are not sent to them. Only the patterns implemented in this module are
+//! detected; this is not a compliance guarantee.
 //! Restores original values post-translation deterministically.
 
 use regex::Regex;
@@ -101,10 +102,10 @@ mod tests {
     #[test]
     fn test_email_redaction_and_restoration() {
         let mut session = PiiSession::new();
-        let input = "Please contact support at security@twn.systems for assistance.";
+        let input = "Please contact support at support@example.com for assistance.";
         let redacted = session.redact(input);
 
-        assert!(!redacted.contains("security@twn.systems"));
+        assert!(!redacted.contains("support@example.com"));
         assert!(redacted.contains("{{GLOSSA_PII_EMAIL_1}}"));
 
         // Simulate Spanish translation keeping placeholder untouched
@@ -113,7 +114,7 @@ mod tests {
 
         assert_eq!(
             restored,
-            "Por favor contacte a soporte en security@twn.systems para ayuda."
+            "Por favor contacte a soporte en support@example.com para ayuda."
         );
     }
 

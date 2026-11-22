@@ -1,6 +1,6 @@
-//! Universal i18n Importer & Drop-in Migration Engine.
+//! Importer for configuration files of other i18n tools.
 //!
-//! Automatically imports existing configurations and catalogs from:
+//! Detects and reads the locale settings of:
 //! - Lingo.dev (`i18n.json`/`i18n.lock` — current naming; `lingo.json`/`lingo.lock` — legacy)
 //! - Inlang / Paraglide (`project.inlang/settings.json`)
 //! - Tolgee (`.tolgeerc`/`.tolgeerc.json` and variants, `tolgee.config.{js,cjs}`)
@@ -50,7 +50,7 @@ pub struct DetectedImport {
     pub include_patterns: Vec<String>,
 }
 
-/// Scans a directory to detect incumbent i18n configurations for drop-in migration.
+/// Scans a directory for configuration files of other i18n tools.
 pub fn detect_incumbent_systems(root: &Path) -> Vec<DetectedImport> {
     let mut detected = Vec::new();
 
@@ -192,7 +192,7 @@ pub fn detect_incumbent_systems(root: &Path) -> Vec<DetectedImport> {
     detected
 }
 
-/// Performs drop-in migration: imports settings into GlossaConfig.
+/// Imports detected settings into the Glossa config.
 pub fn import_to_glossa_config(import: &DetectedImport, base_config: &mut LingoConfig) {
     if let Some(src) = &import.source_locale {
         base_config.source_locale = src.clone();
@@ -372,7 +372,7 @@ mod tests {
     }
 
     /// Real fixture: verbatim `i18n.json` content pulled from
-    /// `gitroomhq/postiz-app` (a live, 36k-star Lingo.dev user) on 2026-09-19.
+    /// `gitroomhq/postiz-app` on 2026-09-19.
     /// Regression guard for the bug where glossa only recognized the legacy
     /// flat `lingo.json` shape and silently mis-detected real Lingo.dev
     /// projects as generic "i18next" with a hardcoded empty target list.
@@ -412,8 +412,8 @@ mod tests {
         assert_eq!(imports[0].format.as_deref(), Some("json"));
     }
 
-    /// Third independent real fixture — `formbricks/formbricks` (12.9k
-    /// stars), confirming the schema generalizes and exercising
+    /// Third independent real fixture — `formbricks/formbricks`
+    /// confirming the schema generalizes and exercising
     /// region-tagged locale codes (`zh-Hans-CN`, and two distinct Portuguese
     /// variants `pt-BR`/`pt-PT`) that the postiz-app fixture didn't cover.
     /// Real path is `apps/web/i18n.json` in formbricks' monorepo, not the
@@ -735,7 +735,7 @@ files:
     }
 
     /// Real fixture: verbatim `project.inlang/settings.json` from
-    /// `AppFlowy-IO/AppFlowy` (76.8k stars, a real, live inlang user).
+    /// `AppFlowy-IO/AppFlowy`.
     /// Positive-confirmation regression guard — unlike the Lingo.dev/Tolgee/
     /// Crowdin bugs, this path was already correct, but a real 30-language,
     /// region-tagged (`pt-BR`/`zh-CN`/`fr-CA` style) fixture is worth locking

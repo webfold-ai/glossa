@@ -91,10 +91,10 @@ ARG IMAGE_VERSION=dev
 
 LABEL org.opencontainers.image.title="${BINARY}" \
       org.opencontainers.image.description="glossa — cross-language i18n catalogue CLI" \
-      org.opencontainers.image.source="https://gitlab.com/ptyktos/glossa" \
+      org.opencontainers.image.source="https://github.com/webfold-ai/glossa" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.version="${IMAGE_VERSION}" \
-      org.opencontainers.image.licenses="MIT OR Apache-2.0" \
-      org.opencontainers.image.vendor="Ptyktos" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.vendor="webfold-ai" \
       org.opencontainers.image.base.image="alpine:3.20"

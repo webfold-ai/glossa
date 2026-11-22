@@ -1,7 +1,6 @@
-//! Mitosis-Spirit Cross-Framework Emitters: `fromTerm`.
+//! Cross-framework emitters (`fromTerm`).
 //!
-//! Theorem: `adapt = fromTerm ∘ universalLift` (Sanguine/UniversalAdapter).
-//! Compiles ApeironTerm units into framework-native components or zero-runtime static evaluations.
+//! Compiles ApeironTerm units into React, Vue, Svelte and Solid output or static evaluations.
 
 pub mod react;
 pub mod resource;

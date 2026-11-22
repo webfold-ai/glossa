@@ -200,12 +200,12 @@ mod tests {
     fn test_extract_markdown() {
         let md = r#"---
 title: Documentation
-author: Ptyktos
+author: Example
 ---
 
 # Getting Started
 
-Welcome to the **fastest** localization platform on earth. Check the [documentation](https://docs.ptyktos.com) for more details.
+Welcome to the **example** project. Check the [documentation](https://docs.example.com) for more details.
 
 ```bash
 cargo run --release

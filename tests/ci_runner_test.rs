@@ -1,11 +1,9 @@
-//! CI Runner Simulation & Workflow Invariant Test Suite.
-//!
-//! Verifies that ptyktos-lingo satisfies all CI/CD runner requirements:
+//! Tests for `glossa check --ci` as run from a CI job:
 //! 1. Exits with non-zero code (1) when translations are missing or corrupted.
 //! 2. Emits GitHub Actions workflow command annotations (`::error title=...::`).
 //! 3. Generates markdown table step summaries in `$GITHUB_STEP_SUMMARY`.
-//! 4. Catches Apeiron Null-Gate violations (e.g. dropped `{slot}` or tag corruptions) before deployment.
-//! 5. Successfully passes with exit code 0 when coverage is 100%.
+//! 4. Reports Null-Gate violations (e.g. a dropped `{slot}` or a corrupted tag).
+//! 5. Successfully passes with exit code 0 when every configured locale has a translation.
 
 use std::fs;
 use std::process::Command;
@@ -77,7 +75,7 @@ fn test_ci_runner_failure_on_missing_translations() {
     // Verify GITHUB_STEP_SUMMARY markdown was written
     assert!(summary_file.exists(), "GITHUB_STEP_SUMMARY file must be created");
     let summary_md = fs::read_to_string(&summary_file).unwrap();
-    assert!(summary_md.contains("ptyktos-lingo CI Check: FAILED"));
+    assert!(summary_md.contains("Glossa CI Check: FAILED"));
     assert!(summary_md.contains("Missing Items"));
 }
 
@@ -144,7 +142,7 @@ fn test_ci_runner_success_on_complete_translations() {
     assert!(check_output.status.success(), "CI check must pass with exit code 0 when coverage is complete");
 
     let summary_md = fs::read_to_string(&summary_file).unwrap();
-    assert!(summary_md.contains("ptyktos-lingo CI Check: PASSED"));
+    assert!(summary_md.contains("Glossa CI Check: PASSED"));
 }
 
 #[test]

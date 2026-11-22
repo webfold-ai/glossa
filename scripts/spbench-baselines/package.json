@@ -2,7 +2,7 @@
   "name": "spbench-real-baselines",
   "private": true,
   "type": "module",
-  "description": "Real, runnable measurements of the incumbent baselines spbench compares against — not assumptions. Run `npm install && node benchmark1-extraction.mjs` etc. to reproduce the incumbent_baseline_us constants in ../../src/cli/mod.rs's run_spbench_suite().",
+  "description": "Node.js timing scripts that run comparable operations to `glossa bench`. See README.md.",
   "dependencies": {
     "@babel/parser": "^7",
     "@vue/compiler-sfc": "^3",

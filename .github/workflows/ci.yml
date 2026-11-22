@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   test:
-    name: Build & test (real, on GitHub's own hosted runner)
+    name: Build & test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -23,55 +23,17 @@ jobs:
       - name: cargo build --release
         run: cargo build --release --bin glossa
 
-      - name: SPBench suite — regenerate fresh, in this same environment
+      - name: Run glossa bench
         run: |
-          cargo run --release --bin glossa -- bench --spbench --json-output spbench-results.json | tee spbench-console.txt
+          cargo run --release --bin glossa -- bench --json-output bench-results.json | tee bench-console.txt
 
-      - name: Upload spbench results
+      - name: Upload bench results
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: spbench-results
+          name: bench-results
           path: |
-            spbench-results.json
-            spbench-console.txt
+            bench-results.json
+            bench-console.txt
           if-no-files-found: ignore
 
-      - name: Real-world performance check — precise per-file timing on postiz-app
-        run: |
-          cp target/release/glossa /usr/local/bin/glossa
-          git clone --depth 1 https://github.com/gitroomhq/postiz-app.git /tmp/postiz
-          mkdir -p /tmp/timing-results
-          cd /tmp/postiz
-          find . -type f \( -name '*.js' -o -name '*.jsx' -o -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' -o -name '*.cjs' \) -not -path './.git/*' | while read -r f; do
-            rm -rf /tmp/bisect-one && mkdir -p /tmp/bisect-one
-            cp "$f" "/tmp/bisect-one/$(basename "$f")"
-            cd /tmp/bisect-one
-            t0=$(date +%s%N)
-            set +e
-            timeout 20 glossa extract > /dev/null 2>&1
-            rc=$?
-            set -e
-            t1=$(date +%s%N)
-            ms=$(( (t1 - t0) / 1000000 ))
-            echo "${ms}ms rc=${rc} $f" >> /tmp/timing-results/timings.txt
-            cd /tmp/postiz
-          done
-          sort -rn /tmp/timing-results/timings.txt > "${GITHUB_WORKSPACE}/timing-results.txt"
-          echo "=== slowest 30 files (ms, exit code, path) ==="
-          head -30 "${GITHUB_WORKSPACE}/timing-results.txt"
-          echo "=== summary stats ==="
-          awk '{print $1+0}' /tmp/timing-results/timings.txt > /tmp/ms-only.txt
-          python3 -c "
-          vals = sorted(int(l.strip()) for l in open('/tmp/ms-only.txt') if l.strip())
-          n = len(vals)
-          print(f'count={n} min={vals[0]}ms max={vals[-1]}ms mean={sum(vals)/n:.1f}ms p50={vals[n//2]}ms p90={vals[int(n*0.9)]}ms p99={vals[int(n*0.99)]}ms')
-          "
-
-      - name: Upload timing results
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: timing-results
-          path: timing-results.txt
-          if-no-files-found: ignore

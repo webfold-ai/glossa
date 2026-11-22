@@ -2,9 +2,14 @@
 name = "glossa"
 version = "0.1.0"
 edition = "2021"
-description = "Universal sovereign multi-framework localization compiler and CI/CD verification engine. Measured 4.8x-12.6x faster, ~45x lower memory drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin."
+rust-version = "1.80"
+description = "Localization tool: extract translatable strings from source code and catalogs, translate missing entries, check translations, and write locale catalogs."
 license = "Apache-2.0"
-repository = "https://github.com/Ptyktos/glossa"
+repository = "https://github.com/webfold-ai/glossa"
+readme = "README.md"
+keywords = ["i18n", "localization", "l10n", "translation", "cli"]
+categories = ["command-line-utilities", "internationalization", "development-tools"]
+exclude = [".github/", ".cargo/", "examples/", "scripts/", "skills/", "action.yml", "Dockerfile", "cliff.toml", "deny.toml"]
 
 [[bin]]
 name = "glossa"
@@ -13,10 +18,6 @@ path = "src/bin/glossa.rs"
 [[bin]]
 name = "lingo"
 path = "src/bin/lingo.rs"
-
-[[bin]]
-name = "ptyktos-glossa"
-path = "src/bin/main.rs"
 
 [lib]
 name = "glossa"

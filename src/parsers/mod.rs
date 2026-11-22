@@ -1,8 +1,7 @@
-//! The Universal Ingest Module: `universalLift`.
+//! Extraction entry point: `universalLift`.
 //!
-//! Theorem: `adapt = fromTerm ∘ universalLift` (Sanguine/UniversalAdapter).
-//! Dispatches to framework-specific streaming extractors:
-//! - Web: JSX/TSX, Vue SFC, Svelte, HTML/Jinja/Blade/Tera, Markdown/MDX
+//! Dispatches by file extension to format-specific extractors:
+//! - Web: JSX/TSX, Vue SFC, Svelte, HTML-like templates (`.html`, `.htm`, `.tera`, `.jinja`, `.hbs`, `.ejs`), Markdown/MDX
 //! - Code: Python, Go, Ruby, PHP, Swift, Dart, Angular, Astro
 //! - Catalogs: JSON, YAML, PO, Fluent, Android XML, iOS Strings, Flutter ARB, Properties, XLIFF, CSV
 //! to produce canonical ApeironTerm units.

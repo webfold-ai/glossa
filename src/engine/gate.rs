@@ -24,7 +24,7 @@ pub enum GateViolation {
     GlossaryViolation { term: String, expected: String },
 }
 
-/// Zero-fault translation integrity validation gate.
+/// Translation integrity gate: slot parity, tag balance, injected-markup and glossary checks.
 pub struct ApeironNullGate;
 
 /// Alias for translation integrity gate.
