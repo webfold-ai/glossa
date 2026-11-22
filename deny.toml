@@ -2,19 +2,8 @@
 #
 # Run with: cargo deny check
 #
-# Mirrors the cargo-audit ignore list in .cargo/audit.toml — see comments
-# there for the rationale + upstream-bump tracking. The `supply-chain` job
-# in .github/workflows/supply-chain.yml is a BLOCKING gate on every PR
-# touching Rust. cargo-deny and cargo-audit run side-by-side:
-#   - cargo-deny: banned licenses, banned sources, banned deps, yanked
-#     versions, advisory surface.
-#   - cargo-audit: rustsec advisory database (the canonical CVE feed for
-#     the Rust ecosystem).
-#
-# Together: the supply-chain gate enforces Ptyktos's policy that no Ptyktos
-# substrate crate ships a known-vulnerable dep or an incompatible license
-# without an explicit exception. Both checks fail the PR; caretaker's
-# release-pr job will not merge until they're green.
+# cargo-deny covers licenses, banned sources, banned crates, yanked versions and
+# advisories; cargo-audit (see .cargo/audit.toml) checks the RustSec database.
 
 [advisories]
 version = 2
@@ -23,8 +12,7 @@ ignore = []
 
 [licenses]
 version = 2
-# Allowed licenses — broad but excluding strong copyleft (we ship
-# server-side binaries, not redistributable libraries with mixed licensing).
+# Allowed licenses: permissive licenses plus MPL-2.0 (file-level copyleft).
 allow = [
     "MIT",
     "Apache-2.0",
@@ -35,14 +23,11 @@ allow = [
     "Unicode-3.0",
     "Unicode-DFS-2016",
     "Zlib",
-    "MPL-2.0", # weak copyleft on file basis — acceptable for server binaries
+    "MPL-2.0",
     "CDLA-Permissive-2.0",
     "CC0-1.0",
     "OpenSSL",
     "Unlicense",
-    "FSL-1.1-ALv2", # Legacy: older pinned revisions of the Ptyktos substrate (modelfold,
-                    # memoryfold, the engine) were FSL-1.1-ALv2 before the Apache-2.0
-                    # relicense of 2026-11. Remove once no pinned revision predates it.
 ]
 confidence-threshold = 0.93
 
@@ -50,10 +35,7 @@ confidence-threshold = 0.93
 ignore = true
 
 [bans]
-# Banned crates — keep this list SHORT. The Ptyktos substrate (memoryfold,
-# hashtrinity, apeiron, kleis, sangdb, modelfold, verdict, guardfold,
-# telos, sangsec) is a path-dep stack, not a crates.io dep. Anything else
-# pulled from crates.io must have a justified reason.
+# No crates are banned.
 multiple-versions = "warn"
 wildcards = "deny"
 
@@ -61,12 +43,4 @@ wildcards = "deny"
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = [
-    "https://github.com/Ptyktos/*",
-    "https://gitlab.tas.twn.network/twn/ptyktos/*",
-    "https://github.com/sanguinehost/*",
-    "https://github.com/sang-codspeed/*",
-    "https://github.com/nautilus-modelfold/*",
-    "https://github.com/orhun/*",
-]
-
+allow-git = []

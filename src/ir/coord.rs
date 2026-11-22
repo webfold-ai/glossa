@@ -5,7 +5,7 @@
 //! invariant 64-bit coordinate `ContentCoord`.
 //!
 //! Uses Fibonacci dispersion (`k * PHI`, golden ratio `0x9E3779B97F4A7C15`)
-//! for optimal hash distribution.
+//! for hash dispersion.
 
 use serde::{Deserialize, Serialize};
 use std::fmt;

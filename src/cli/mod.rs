@@ -1,6 +1,6 @@
 //! CLI Commands and Execution Pipelines.
 //!
-//! High-performance sovereign localization engine with complete CI/CD and multi-language support.
+//! Command-line interface: extraction, translation, checks, catalog export, and helpers.
 
 use crate::config::LingoConfig;
 use crate::emitters::{resource, TargetFramework};
@@ -8,7 +8,6 @@ use crate::engine::providers::anthropic::AnthropicProvider;
 use crate::engine::providers::offline::OfflineProvider;
 use crate::engine::providers::ollama::OllamaProvider;
 use crate::engine::providers::openai::OpenAiProvider;
-use crate::engine::providers::ptyktos_api::PtyktosApiProvider;
 use crate::engine::pseudo::pseudo_localize;
 use crate::engine::{TranslationEngine, TranslationProvider};
 use crate::lockfile::LingoLock;
@@ -26,7 +25,7 @@ use std::time::Instant;
     name = "glossa",
     author,
     version,
-    about = "Sovereign multi-framework localization compiler and engine. Measured 4.8x-12.6x faster and ~45x lower memory drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin."
+    about = "Multi-framework localization tool: extract strings, translate missing entries, verify translations, and write locale catalogs."
 )]
 pub struct Cli {
     #[arg(short, long, default_value = ".")]
@@ -38,7 +37,7 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Initialize lingo.json configuration in the project with auto-framework detection
+    /// Initialize the project configuration (glossa.json, or an existing lingo.json) with framework detection
     Init {
         #[arg(short, long)]
         framework: Option<String>,
@@ -54,7 +53,7 @@ pub enum Commands {
         output: Option<PathBuf>,
     },
 
-    /// Translate missing entries using the configured AI engine with integrity gate verification
+    /// Translate missing entries with the configured provider and check each result with the integrity gate
     Translate {
         #[arg(short, long)]
         locales: Option<String>,
@@ -64,7 +63,7 @@ pub enum Commands {
         dry_run: bool,
     },
 
-    /// Compile component templates into framework-native code or zero-runtime evaluation
+    /// Not implemented yet (accepts a target and exits with an error); use `codegen` for generated accessors
     Compile {
         #[arg(short, long)]
         target: String,
@@ -94,11 +93,11 @@ pub enum Commands {
     /// Sync lockfile translations into locale catalog files (JSON, YAML, PO, Fluent, Android XML, iOS, ARB, XLIFF)
     Sync,
 
-    /// Run high-speed micro-benchmarks on the extraction and coordinate pipeline
+    /// Run micro-benchmarks of the extraction, lockfile, gate and emitter code and print Glossa's own timings
     Bench {
         #[arg(short, long, default_value_t = 5000)]
         count: usize,
-        /// Generate full SPBench-structured report output (REG-1 standard with percentiles & three-column verification)
+        /// Also print the report as JSON (with percentiles)
         #[arg(long)]
         spbench: bool,
         /// Output path for structured JSON benchmark report
@@ -109,12 +108,12 @@ pub enum Commands {
     /// Start the Model Context Protocol (MCP) server on stdio
     Mcp,
 
-    /// Sync translation memory with Lorelake content-addressed S3 store (port 3910)
+    /// Push lockfile entries to an HTTP object store (default endpoint http://127.0.0.1:3910); only `push` is implemented
     Lorelake {
-        /// Action: "push", "pull", "status"
+        /// Action: "push" (other values are rejected)
         #[arg(short, long, default_value = "push")]
         action: String,
-        /// Lorelake endpoint URL
+        /// Object store endpoint URL
         #[arg(short, long, default_value = "http://127.0.0.1:3910")]
         endpoint: String,
         /// Bucket name
@@ -135,7 +134,7 @@ pub enum Commands {
         output: Option<PathBuf>,
     },
 
-    /// Generate zero-runtime, type-safe message accessor code (TypeScript or Rust)
+    /// Generate message accessor code with typed slot parameters (TypeScript or Rust)
     Codegen {
         /// Target language: "ts" / "typescript" or "rust"
         #[arg(short, long, default_value = "ts")]
@@ -145,16 +144,16 @@ pub enum Commands {
         output: Option<PathBuf>,
     },
 
-    /// Launch the In-Context Visual Studio & live editor on localhost:3920
+    /// Launch the in-context visual editor (default port 3920)
     Visual {
         /// Local port to bind
         #[arg(short, long, default_value_t = 3920)]
         port: u16,
     },
 
-    /// Drop-in migration: detect and import configuration from Lingo.dev, Inlang, Tolgee, Crowdin, or i18next
+    /// Detect and import locale settings from Lingo.dev, Inlang, Tolgee, Crowdin, Lokalise or i18next config files
     Import {
-        /// Force specific incumbent system: "lingo", "inlang", "tolgee", "crowdin", "lokalise", "i18next"
+        /// Only import from one system: "lingo", "inlang", "tolgee", "crowdin", "lokalise", "i18next"
         #[arg(short, long)]
         from: Option<String>,
     },
@@ -175,7 +174,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             // Auto-detect and import incumbent configurations if present
             let detected_imports = crate::importer::detect_incumbent_systems(&root);
             for imp in &detected_imports {
-                println!("🔄 Detected existing {} config at {}! Migrating to Glossa...", imp.system.name(), imp.config_file.display());
+                println!("Detected existing {} config at {}; importing its settings.", imp.system.name(), imp.config_file.display());
                 crate::importer::import_to_glossa_config(imp, &mut cfg);
             }
 
@@ -204,7 +203,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
         Commands::Extract { output: _ } => {
             let config = LingoConfig::load_or_default(&root);
-            println!("⚡ Scanning project sources across all frameworks (React, Vue, Svelte, Mobile, Backend)...");
+            println!("Scanning project sources...");
             let start = Instant::now();
 
             let catalog = extract_directory(&root, &[])?;
@@ -242,7 +241,6 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             println!("🌐 Initializing translation engine: {provider_name}");
 
             let prov: Arc<dyn TranslationProvider> = match provider_name.as_str() {
-                "ptyktos-api" => Arc::new(PtyktosApiProvider::new(None, None)),
                 "openai" => Arc::new(OpenAiProvider::new(None, None, None)),
                 "anthropic" | "claude" => Arc::new(AnthropicProvider::new(None, None)),
                 "ollama" | "local" => Arc::new(OllamaProvider::new(None, None)),
@@ -260,7 +258,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
             let deltas = lock.compute_deltas(&target_locales);
             if deltas.is_empty() {
-                println!("✨ All translations are up to date! Zero tokens needed.");
+                println!("All translations are up to date; nothing to translate.");
                 return Ok(());
             }
 
@@ -316,10 +314,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         Commands::Compile { target, in_place } => {
-            println!("🛠️  Mitosis-Spirit Compiler: compiling components for {target} (in-place: {in_place})");
             let target_fw = TargetFramework::parse(&target).unwrap_or(TargetFramework::React);
-            println!("   Target framework selected: {:?}", target_fw);
-            println!("✓ Templates successfully compiled!");
+            return Err(format!(
+                "`compile` is not implemented yet (target {target_fw:?}, in-place: {in_place}); use `glossa codegen` to generate accessors"
+            )
+            .into());
         }
 
         Commands::Check { ci, format } => {
@@ -357,7 +356,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 // Write GitHub Step Summary if in GitHub Actions
                 if let Ok(summary_path) = std::env::var("GITHUB_STEP_SUMMARY") {
                     if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(summary_path) {
-                        let _ = writeln!(file, "## ❌ ptyktos-lingo CI Check: FAILED");
+                        let _ = writeln!(file, "## Glossa CI Check: FAILED");
                         let _ = writeln!(
                             file,
                             "| Target Locales | Missing Items | Total Entries |"
@@ -378,12 +377,12 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
             if let Ok(summary_path) = std::env::var("GITHUB_STEP_SUMMARY") {
                 if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(summary_path) {
-                    let _ = writeln!(file, "## ✅ Glossa / ptyktos-lingo CI Check: PASSED");
-                    let _ = writeln!(file, "100% localization coverage across {:?}. Validated by Zero-Fault Integrity Gate.", config.target_locales);
+                    let _ = writeln!(file, "## Glossa CI Check: PASSED");
+                    let _ = writeln!(file, "All {} entries have translations for {:?}.", lock.entries.len(), config.target_locales);
                 }
             }
 
-            println!("✅ CI Check Passed: 100% localization coverage verified by Zero-Fault Integrity Gate.");
+            println!("CI Check Passed: all {} entries have translations for {:?}.", lock.entries.len(), config.target_locales);
         }
 
         Commands::Diff => {
@@ -444,7 +443,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let lock_path = LingoLock::resolve_path(&root);
             let lock = LingoLock::load_from_file(&lock_path).unwrap_or_default();
             export_locales(&root, &config, &lock)?;
-            println!("🔄 Synchronized all locale files from lockfile.");
+            println!("Synchronized all locale files from lockfile.");
         }
 
         Commands::Bench {
@@ -473,18 +472,14 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
             match action.as_str() {
                 "push" => {
-                    println!("🌊 Pushing {} translations to Lorelake content-addressed store...", lock.entries.len());
+                    println!("Pushing {} entries to {}...", lock.entries.len(), client.config.endpoint);
                     match client.push_translations(&lock).await {
-                        Ok(pushed) => println!("✓ Successfully synced {pushed} coordinate entries to Lorelake."),
-                        Err(e) => println!("! Lorelake sync notice: {e} (continuing with local cache)"),
+                        Ok(pushed) => println!("Pushed {pushed} of {} entries.", lock.entries.len()),
+                        Err(e) => return Err(format!("push failed: {e}").into()),
                     }
                 }
-                "pull" => {
-                    println!("🌊 Pulling translations from Lorelake lakehouse...");
-                    println!("✓ Lorelake coordinate sync complete.");
-                }
-                _ => {
-                    println!("Lorelake lakehouse status: connected ({})", client.config.endpoint);
+                other => {
+                    return Err(format!("unsupported action \"{other}\"; only \"push\" is implemented").into());
                 }
             }
         }
@@ -541,7 +536,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 fs::create_dir_all(parent)?;
             }
             fs::write(&out_file, code)?;
-            println!("⚡ Generated zero-runtime type-safe code at {}", out_file.display());
+            println!("Generated message accessors at {}", out_file.display());
             println!("   Total catalog functions: {}", lock.entries.len());
         }
 
@@ -570,7 +565,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
                     crate::importer::import_to_glossa_config(imp, &mut config);
                 }
                 let saved = config.save_to_file(&root)?;
-                println!("✓ Successfully migrated configuration to {}", saved.display());
+                println!("Wrote configuration to {}", saved.display());
             }
         }
     }
@@ -646,14 +641,15 @@ pub struct SpbenchReport {
     pub timestamp: String,
     pub environment: SpbenchEnv,
     pub benchmarks: Vec<BenchmarkResult>,
-    pub three_column_verification: Vec<ThreeColumnRow>,
 }
 
 #[derive(serde::Serialize, Debug)]
 pub struct SpbenchEnv {
     pub os: String,
     pub arch: String,
-    pub peak_rss_mb: f64,
+    /// Resident set size of this process in MB when the benchmarks finished
+    /// (read from `/proc/self/statm`; `null` where that file is unavailable).
+    pub rss_mb_at_end: Option<f64>,
 }
 
 #[derive(serde::Serialize, Debug)]
@@ -666,27 +662,13 @@ pub struct BenchmarkResult {
     pub p50_us: f64,
     pub p90_us: f64,
     pub p99_us: f64,
-    pub incumbent_baseline_us: f64,
-    pub speedup_vs_incumbent: f64,
 }
 
-#[derive(serde::Serialize, Debug)]
-pub struct ThreeColumnRow {
-    pub subsystem: String,
-    pub quality_fidelity: String,
-    pub speed_ptyktos: String,
-    pub baseline_incumbent: String,
-}
-
-fn get_peak_rss_mb() -> f64 {
-    if let Ok(content) = fs::read_to_string("/proc/self/statm") {
-        if let Some(pages_str) = content.split_whitespace().nth(1) {
-            if let Ok(pages) = pages_str.parse::<f64>() {
-                return (pages * 4096.0) / (1024.0 * 1024.0);
-            }
-        }
-    }
-    14.2
+/// Current resident set size in MB, from `/proc/self/statm` (assumes 4 KiB pages).
+fn current_rss_mb() -> Option<f64> {
+    let content = fs::read_to_string("/proc/self/statm").ok()?;
+    let pages = content.split_whitespace().nth(1)?.parse::<f64>().ok()?;
+    Some((pages * 4096.0) / (1024.0 * 1024.0))
 }
 
 fn percentile(sorted: &[f64], pct: f64) -> f64 {
@@ -697,12 +679,37 @@ fn percentile(sorted: &[f64], pct: f64) -> f64 {
     sorted[idx.min(sorted.len() - 1)]
 }
 
+/// Builds a result from per-operation latencies (microseconds) and the wall time of the loop.
+/// `ops_per_sample` is how many logical operations one latency sample covers.
+fn summarize(
+    name: &str,
+    mut samples_us: Vec<f64>,
+    ops_per_sample: usize,
+    elapsed: std::time::Duration,
+) -> BenchmarkResult {
+    samples_us.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let ops = (samples_us.len() * ops_per_sample).max(1);
+    let per_op = ops_per_sample as f64;
+    BenchmarkResult {
+        name: name.to_string(),
+        count: ops,
+        total_ms: elapsed.as_secs_f64() * 1000.0,
+        throughput_per_sec: ops as f64 / elapsed.as_secs_f64().max(f64::MIN_POSITIVE),
+        mean_us: elapsed.as_secs_f64() * 1_000_000.0 / ops as f64,
+        p50_us: percentile(&samples_us, 50.0) / per_op,
+        p90_us: percentile(&samples_us, 90.0) / per_op,
+        p99_us: percentile(&samples_us, 99.0) / per_op,
+    }
+}
+
+/// Times Glossa's own code on fixed in-process samples and prints the results. It does not run
+/// or compare against any other tool, and the numbers depend on the machine it runs on.
 fn run_spbench_suite(
     count: usize,
     spbench: bool,
     json_output: Option<PathBuf>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("⚡ Initializing ptyktos-lingo SPBench Performance Suite ({count} iterations)...");
+    println!("Running Glossa micro-benchmarks ({count} iterations)...");
 
     let sample_jsx = r#"
     export default function Card({ title, count, user }) {
@@ -726,13 +733,10 @@ fn run_spbench_suite(
     </template>
     "#;
 
-    // -------------------------------------------------------------
-    // BENCHMARK 1: Universal Ingest / Extraction
-    // -------------------------------------------------------------
-    let mut latencies_us = Vec::with_capacity(count);
+    // 1. Extraction: alternates the JSX and Vue samples.
+    let mut samples = Vec::with_capacity(count);
     let mut total_extracted = 0;
-    let b1_start = Instant::now();
-
+    let start = Instant::now();
     for i in 0..count {
         let t0 = Instant::now();
         let items = if i % 2 == 0 {
@@ -740,261 +744,92 @@ fn run_spbench_suite(
         } else {
             crate::parsers::vue::extract_vue(sample_vue, &format!("User{i}.vue"))
         };
-        latencies_us.push(t0.elapsed().as_nanos() as f64 / 1000.0);
+        samples.push(t0.elapsed().as_nanos() as f64 / 1000.0);
         total_extracted += items.len();
     }
-    let b1_elapsed = b1_start.elapsed();
-    latencies_us.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let extraction = summarize("Extraction (JSX and Vue samples, alternating)", samples, 1, start.elapsed());
 
-    let b1_mean = b1_elapsed.as_micros() as f64 / count as f64;
-    let b1_p50 = percentile(&latencies_us, 50.0);
-    let b1_p90 = percentile(&latencies_us, 90.0);
-    let b1_p99 = percentile(&latencies_us, 99.0);
-    let b1_fps = count as f64 / b1_elapsed.as_secs_f64();
-    // REAL measured baseline, not an assumption: real @babel/parser (JSX
-    // half) + real @vue/compiler-sfc (Vue SFC half), on this exact sample
-    // content, 500-iteration JIT warmup + 5000 measured iterations each,
-    // Node v22.22.0. Measured 2026-09-19; re-measure with
-    // `node bench.mjs` (script kept alongside this fix) if the incumbent
-    // package versions change. Combined mean matches this function's own
-    // i%2==0 jsx/vue alternation. Previous value (15200.0, "15.2ms/file")
-    // was an unsourced assumption roughly 180x slower than the real number
-    // — inflating the reported speedup by the same factor.
-    let b1_incumbent_us = 84.42;
-    let b1_speedup = b1_incumbent_us / b1_mean.max(0.001);
-
-    // -------------------------------------------------------------
-    // BENCHMARK 2: Content-Addressed Coordinate Hashing & Monoid Merge
-    // -------------------------------------------------------------
+    // 2. Coordinate hashing plus lockfile insertion.
     let b2_count = count * 2;
     let mut lock = crate::lockfile::LingoLock::new();
-    let mut b2_latencies_ns = Vec::with_capacity(b2_count);
-    let b2_start = Instant::now();
+    let mut samples = Vec::with_capacity(b2_count);
+    let start = Instant::now();
     for i in 0..b2_count {
         let t0 = Instant::now();
         let coord = crate::ir::coord::ApeironCoord::from_str_canonical(&format!("Term #{i} in application context"));
         lock.record_translation(coord, "es", format!("Término #{i}"), "spbench", 1.0);
-        b2_latencies_ns.push(t0.elapsed().as_nanos() as f64);
+        samples.push(t0.elapsed().as_nanos() as f64 / 1000.0);
     }
-    let b2_elapsed = b2_start.elapsed();
-    let b2_hash_ns = (b2_elapsed.as_nanos() as f64) / b2_count as f64;
-    b2_latencies_ns.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let b2_p50_ns = percentile(&b2_latencies_ns, 50.0);
-    let b2_p90_ns = percentile(&b2_latencies_ns, 90.0);
-    let b2_p99_ns = percentile(&b2_latencies_ns, 99.0);
-    // REAL measured baseline: plain Node.js object-property-assignment merge
-    // (the natural equivalent of "insert a translation record into a
-    // key-value store"), same 10000-op count, Node v22.22.0, measured
-    // 2026-09-19. Previous value (implicit via a hardcoded 450.0x multiplier
-    // with no baseline_us basis at all) was not derived from any
-    // measurement.
-    let b2_incumbent_us = 3.057;
-    let b2_speedup = b2_incumbent_us / (b2_hash_ns / 1000.0).max(0.0001);
+    let lockfile = summarize("Coordinate hash and lockfile insert", samples, 1, start.elapsed());
 
-    // -------------------------------------------------------------
-    // BENCHMARK 3: Zero-Fault Integrity Gate Adversarial Verification
-    // -------------------------------------------------------------
-    let b3_count = count;
+    // 3. Integrity gate on one valid pair (slots and numbered tags preserved).
     let valid_src = "Welcome {user}, click <0>here</0> to proceed.";
     let valid_trans = "Bienvenido {user}, haz clic <0>aquí</0> para continuar.";
-    let mut b3_latencies_us = Vec::with_capacity(b3_count);
-    let b3_start = Instant::now();
-    let mut verified = 0;
-    for _ in 0..b3_count {
+    let mut samples = Vec::with_capacity(count);
+    let mut gate_ok = 0usize;
+    let start = Instant::now();
+    for _ in 0..count {
         let t0 = Instant::now();
-        let ok = crate::engine::gate::ApeironNullGate::validate(valid_src, valid_trans).is_ok();
-        b3_latencies_us.push(t0.elapsed().as_nanos() as f64 / 1000.0);
-        if ok {
-            verified += 1;
+        if crate::engine::gate::ApeironNullGate::validate(valid_src, valid_trans).is_ok() {
+            gate_ok += 1;
         }
+        samples.push(t0.elapsed().as_nanos() as f64 / 1000.0);
     }
-    let b3_elapsed = b3_start.elapsed();
-    let b3_rate = verified as f64 / b3_elapsed.as_secs_f64();
-    b3_latencies_us.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let b3_p50 = percentile(&b3_latencies_us, 50.0);
-    let b3_p90 = percentile(&b3_latencies_us, 90.0);
-    let b3_p99 = percentile(&b3_latencies_us, 99.0);
-    // REAL measured baseline: a real regex-based slot/{placeholder} and
-    // <N>tag</N> preservation validator in Node.js (the naive approach the
-    // "Regex wrapper" label describes), same sample strings, 500-iteration
-    // warmup, Node v22.22.0, measured 2026-09-19. Previous value (45.0,
-    // "12,000 checks/sec") was ~5.5x slower than what a real regex validator
-    // actually achieves in modern V8.
-    let b3_incumbent_us = 4.242; // 1e6 / 235773.5 checks/sec, measured
+    let gate = summarize("Integrity gate (one valid pair)", samples, 1, start.elapsed());
 
-    // -------------------------------------------------------------
-    // BENCHMARK 4: Multi-format Emitters (JSON, YAML, PO, Fluent)
-    // -------------------------------------------------------------
+    // 4. Catalog emitters: JSON, YAML, PO and Fluent over a 500-key catalog, repeated.
     let mut catalog = BTreeMap::new();
     for i in 0..500 {
         catalog.insert(format!("key_{i}"), format!("Translated text #{i} for user {{user}}"));
     }
-    // Repeat the whole 4-emitter bulk call to get a real distribution
-    // (percentiles across repeated runs) instead of timing it once — a
-    // single measurement has no variance to report a percentile from.
     const B4_ITERATIONS: usize = 200;
-    let mut b4_latencies_us = Vec::with_capacity(B4_ITERATIONS);
-    let b4_start = Instant::now();
+    let mut samples = Vec::with_capacity(B4_ITERATIONS);
+    let start = Instant::now();
     for _ in 0..B4_ITERATIONS {
         let t0 = Instant::now();
         let _json = crate::emitters::resource::emit_json(&catalog);
         let _yaml = crate::emitters::resource::emit_yaml(&catalog, "es");
         let _po = crate::emitters::resource::emit_po(&catalog, "es");
         let _ftl = crate::emitters::resource::emit_fluent(&catalog);
-        b4_latencies_us.push(t0.elapsed().as_nanos() as f64 / 1000.0);
+        samples.push(t0.elapsed().as_nanos() as f64 / 1000.0);
     }
-    let b4_elapsed = b4_start.elapsed();
-    let b4_terms_sec = (500.0 * 4.0 * B4_ITERATIONS as f64) / b4_elapsed.as_secs_f64();
-    b4_latencies_us.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let b4_p50 = percentile(&b4_latencies_us, 50.0) / (500.0 * 4.0);
-    let b4_p90 = percentile(&b4_latencies_us, 90.0) / (500.0 * 4.0);
-    let b4_p99 = percentile(&b4_latencies_us, 99.0) / (500.0 * 4.0);
-    // REAL measured baseline: real JSON.stringify + real js-yaml.dump + real
-    // gettext-parser PO compile on the same 500-key catalog, Node v22.22.0,
-    // measured 2026-09-19. Only 3 formats (JSON/YAML/PO), not glossa's 4
-    // (JSON/YAML/PO/Fluent) — a real fluent.js measurement wasn't taken
-    // rather than fabricating a 4th data point, so this baseline is
-    // marginally favorable to glossa (missing the 4th format's cost on the
-    // incumbent side). Previous value (850.0, unsourced) was ~194x slower
-    // than the real 3-format number.
-    let b4_incumbent_us = 4.385;
-
-    let rss_mb = get_peak_rss_mb();
-
-    let benchmarks = vec![
-        BenchmarkResult {
-            name: "Universal Ingest / Extraction (JSX & Vue SFC)".to_string(),
-            count,
-            total_ms: b1_elapsed.as_secs_f64() * 1000.0,
-            throughput_per_sec: b1_fps,
-            mean_us: b1_mean,
-            p50_us: b1_p50,
-            p90_us: b1_p90,
-            p99_us: b1_p99,
-            incumbent_baseline_us: b1_incumbent_us,
-            speedup_vs_incumbent: b1_speedup,
-        },
-        BenchmarkResult {
-            name: "Content-Addressed Coordinate & Lockfile Merge (Table::fuse)".to_string(),
-            count: b2_count,
-            total_ms: b2_elapsed.as_secs_f64() * 1000.0,
-            throughput_per_sec: b2_count as f64 / b2_elapsed.as_secs_f64(),
-            mean_us: b2_hash_ns / 1000.0,
-            p50_us: b2_p50_ns / 1000.0,
-            p90_us: b2_p90_ns / 1000.0,
-            p99_us: b2_p99_ns / 1000.0,
-            incumbent_baseline_us: b2_incumbent_us,
-            speedup_vs_incumbent: b2_speedup,
-        },
-        BenchmarkResult {
-            name: "Zero-Fault Integrity Gate Adversarial Integrity".to_string(),
-            count: b3_count,
-            total_ms: b3_elapsed.as_secs_f64() * 1000.0,
-            throughput_per_sec: b3_rate,
-            mean_us: b3_elapsed.as_micros() as f64 / b3_count as f64,
-            p50_us: b3_p50,
-            p90_us: b3_p90,
-            p99_us: b3_p99,
-            incumbent_baseline_us: b3_incumbent_us,
-            speedup_vs_incumbent: b3_incumbent_us / (b3_elapsed.as_micros() as f64 / b3_count as f64).max(0.0001),
-        },
-        BenchmarkResult {
-            name: "Universal Emitters (JSON/YAML/PO/Fluent)".to_string(),
-            count: 2000 * B4_ITERATIONS,
-            total_ms: b4_elapsed.as_secs_f64() * 1000.0,
-            throughput_per_sec: b4_terms_sec,
-            mean_us: b4_elapsed.as_micros() as f64 / (2000.0 * B4_ITERATIONS as f64),
-            p50_us: b4_p50,
-            p90_us: b4_p90,
-            p99_us: b4_p99,
-            incumbent_baseline_us: b4_incumbent_us,
-            speedup_vs_incumbent: b4_incumbent_us / (b4_elapsed.as_micros() as f64 / (2000.0 * B4_ITERATIONS as f64)).max(0.0001),
-        },
-    ];
-
-    // Every baseline below is a real measurement (see bench.mjs / bench2_3.mjs
-    // / bench4.mjs, and the real `npx lingo.dev@latest --version` RSS
-    // measurement), not an assumption — methodology documented at each
-    // `*_incumbent_us` constant above. Measured 2026-09-19, Node v22.22.0.
-    let three_column = vec![
-        ThreeColumnRow {
-            subsystem: "Project Ingestion (Universal Lift)".to_string(),
-            quality_fidelity: "100% Extracted (0 Parse Errors)".to_string(),
-            speed_ptyktos: format!("{:.0} files/sec ({:.2} µs/file)", b1_fps, b1_mean),
-            baseline_incumbent: format!("{:.0} files/sec ({:.2} µs/file, real @babel/parser+@vue/compiler-sfc)", 1_000_000.0 / b1_incumbent_us, b1_incumbent_us),
-        },
-        ThreeColumnRow {
-            subsystem: "Coordinate Deduplication".to_string(),
-            quality_fidelity: "Order-Free Monoid (0 Git Conflicts)".to_string(),
-            speed_ptyktos: format!("{:.1} ns / coordinate", b2_hash_ns),
-            baseline_incumbent: format!("{:.2} µs / key (real Node.js object-merge)", b2_incumbent_us),
-        },
-        ThreeColumnRow {
-            subsystem: "Null-Gate Validation".to_string(),
-            quality_fidelity: "100% Slot & Tag Conservation".to_string(),
-            speed_ptyktos: format!("{:.0} checks/sec", b3_rate),
-            baseline_incumbent: format!("{:.0} checks/sec (real Node.js regex validator)", 1_000_000.0 / b3_incumbent_us),
-        },
-        ThreeColumnRow {
-            subsystem: "Memory Footprint (RSS)".to_string(),
-            quality_fidelity: "Zero Leak (Static Lifetime)".to_string(),
-            speed_ptyktos: format!("{:.1} MB RSS", rss_mb),
-            baseline_incumbent: "375.0 MB (real `npx lingo.dev@latest --version` peak RSS)".to_string(),
-        },
-    ];
+    let emitters = summarize(
+        "Emitters (JSON, YAML, PO, Fluent; per unit per format)",
+        samples,
+        500 * 4,
+        start.elapsed(),
+    );
 
     let report = SpbenchReport {
-        suite: "PTYKTOS-LINGO SPBENCH PERFORMANCE & REGRESSION SUITE".to_string(),
+        suite: "glossa bench".to_string(),
         timestamp: crate::lockfile::now_rfc3339(),
         environment: SpbenchEnv {
             os: std::env::consts::OS.to_string(),
             arch: std::env::consts::ARCH.to_string(),
-            peak_rss_mb: rss_mb,
+            rss_mb_at_end: current_rss_mb(),
         },
-        benchmarks,
-        three_column_verification: three_column,
+        benchmarks: vec![extraction, lockfile, gate, emitters],
     };
 
-    // Print structured SPBench console report
-    println!("\n==========================================================================================");
-    println!("                          PTYKTOS-LINGO SPBENCH PERFORMANCE SUITE                        ");
-    println!("==========================================================================================");
-    println!("OS: {} | Arch: {} | Peak Memory: {:.1} MB RSS", report.environment.os, report.environment.arch, report.environment.peak_rss_mb);
-    println!("Timestamp: {} | Engine: Glossa Sovereign Rust Engine", report.timestamp);
-    println!("------------------------------------------------------------------------------------------");
-    println!("BENCHMARK 1: MULTI-FRAMEWORK AST EXTRACTION (JSX, TSX & Vue SFC)");
-    println!("  Processed:           {count} components ({total_extracted} terms)");
-    println!("  Throughput:          {:.2} files/sec", b1_fps);
-    println!("  Latency (Mean):      {:.2} µs/file", b1_mean);
-    println!("  Latency (p50):       {:.2} µs", b1_p50);
-    println!("  Latency (p90):       {:.2} µs", b1_p90);
-    println!("  Latency (p99):       {:.2} µs", b1_p99);
-    println!("  Incumbent Baseline:  {:.2} µs/file (real @babel/parser + @vue/compiler-sfc measurement)", b1_incumbent_us);
-    println!("  SPEEDUP:             {:.1}x FASTER", b1_speedup);
-    println!("\nBENCHMARK 2: CONTENT-ADDRESSED COORDINATE CACHE & LOCKFILE MERGE");
-    println!("  Coordinate Hash:     {:.2} ns/term (Fibonacci k*Phi)", b2_hash_ns);
-    println!("  Lockfile Fuse:       {:.2} ms for {b2_count} translations", b2_elapsed.as_secs_f64() * 1000.0);
-    println!("  Conflict Rate:       0.0% (monoidal commutativity)");
-    println!("\nBENCHMARK 3: AUTOMATED SLOT & MARKUP INTEGRITY GATE");
-    println!("  Verification Rate:   {:.0} terms/sec", b3_rate);
-    println!("  Integrity Score:     100.0% (0 false positives, 100% corruption caught)");
-    println!("------------------------------------------------------------------------------------------");
-    println!("THREE-COLUMN REG-1 VERIFICATION TABLE:");
-    println!("{:<32} | {:<25} | {:<22} | {:<25}", "Subsystem", "Quality (Fidelity)", "Speed (ptyktos)", "Baseline Incumbent");
-    println!("{:-<32}-+-{:-<25}-+-{:-<22}-+-{:-<25}", "", "", "", "");
-    for row in &report.three_column_verification {
-        println!("{:<32} | {:<25} | {:<22} | {:<25}", row.subsystem, row.quality_fidelity, row.speed_ptyktos, row.baseline_incumbent);
+    println!("OS: {} | Arch: {} | Timestamp: {}", report.environment.os, report.environment.arch, report.timestamp);
+    println!("Extraction produced {total_extracted} terms; the gate accepted {gate_ok} of {count} checks.");
+    println!("{:<58} {:>10} {:>12} {:>10} {:>10} {:>10}", "Benchmark", "ops", "ops/sec", "mean us", "p50 us", "p99 us");
+    for b in &report.benchmarks {
+        println!(
+            "{:<58} {:>10} {:>12.0} {:>10.3} {:>10.3} {:>10.3}",
+            b.name, b.count, b.throughput_per_sec, b.mean_us, b.p50_us, b.p99_us
+        );
     }
-    println!("==========================================================================================");
+    if let Some(rss) = report.environment.rss_mb_at_end {
+        println!("RSS at end of run: {rss:.1} MB");
+    }
 
     if let Some(out_path) = json_output {
         let json_data = serde_json::to_string_pretty(&report)?;
         fs::write(&out_path, json_data)?;
-        println!("✓ Exported SPBench structured JSON report to: {}", out_path.display());
+        println!("Wrote JSON report to {}", out_path.display());
     } else if spbench {
-        let json_data = serde_json::to_string_pretty(&report)?;
-        println!("\n--- SPBENCH STRUCTURED JSON REPORT ---");
-        println!("{json_data}");
+        println!("{}", serde_json::to_string_pretty(&report)?);
     }
 
     Ok(())

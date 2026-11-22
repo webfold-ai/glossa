@@ -68,7 +68,7 @@ async fn handle_mcp_request(req: &McpRequest, engine: &TranslationEngine) -> Mcp
                     "tools": {}
                 },
                 "serverInfo": {
-                    "name": "ptyktos-lingo-mcp",
+                    "name": "glossa-mcp",
                     "version": env!("CARGO_PKG_VERSION")
                 }
             })),

@@ -1,13 +1,14 @@
-//! Exhaustive Multi-Language & Framework Regression Suite for ptyktos-lingo.
+//! Multi-language and framework extraction tests.
 //!
-//! Grounded in Sanguine's theorem: `adapt = fromTerm ∘ universalLift`.
-//! Validates 100% feature coverage and semantic equivalence across:
-//! - Web Frameworks: React TSX/JSX, Vue 3 SFC, Svelte, Angular, SolidJS, Astro, HTML/Jinja/Blade
-//! - Documentation: Markdown & MDX
-//! - Backend & Systems: Python/Django, Go, Ruby on Rails, PHP/Laravel, Rust
-//! - Native Mobile: Apple iOS Swift & .strings, Android Kotlin & XML, Flutter Dart & ARB
-//! - Enterprise Resource Catalogs: JSON, YAML, PO/POT, Fluent, Properties, XLIFF 1.2/2.0, CSV
-//! - Gate Invariants: Slot preservation, numbered tag conservation, and protected brand glossaries.
+//! Each test feeds a fixed fixture to the extractor for one ecosystem and asserts what is (and is
+//! not) extracted. Ecosystems with a test here:
+//! - Web: React TSX/JSX, Vue SFC, Svelte, Angular (`$localize`), Astro
+//! - Backend: Python, Go, Ruby (Rails), PHP (Laravel) translation-call patterns
+//! - Mobile: Swift and iOS `.strings`, Android `strings.xml`, Flutter ARB
+//! - Catalogs: JSON, YAML, PO, Fluent, Properties, XLIFF
+//! - Gate: slot preservation, numbered tag conservation, protected glossary terms
+//!
+//! Coverage is limited to the fixtures in this file.
 
 use glossa::emitters::resource;
 use glossa::engine::gate::ApeironNullGate;
@@ -544,7 +545,7 @@ fn test_regression_catalogs_multi_format() {
 }
 
 // =========================================================================
-// 13. ROUNDTRIP EMITTER FIDELITY (Zero Drift Verification)
+// 13. ROUNDTRIP: EMIT -> PARSE
 // =========================================================================
 #[test]
 fn test_regression_roundtrip_emitters() {
@@ -576,21 +577,21 @@ fn test_regression_roundtrip_emitters() {
 }
 
 // =========================================================================
-// 14. APEIRON NULL-GATE: GLOSSARY & ADVERSARIAL INJECTION INTEGRITY
+// 14. NULL-GATE: GLOSSARY & INJECTED MARKUP
 // =========================================================================
 #[test]
 fn test_regression_null_gate_and_glossary() {
     // 1. Protected Glossary enforcement
     let mut glossary = BTreeMap::new();
-    glossary.insert("Ptyktos".to_string(), "Ptyktos".to_string());
-    glossary.insert("Apeiron".to_string(), "Apeiron".to_string());
+    glossary.insert("Acme".to_string(), "Acme".to_string());
+    glossary.insert("Orbit".to_string(), "Orbit".to_string());
 
-    let src = "Powered by Ptyktos on the Apeiron architecture.";
-    let valid_trans = "Propulsé par Ptyktos sur l'architecture Apeiron.";
+    let src = "Powered by Acme on the Orbit architecture.";
+    let valid_trans = "Propulsé par Acme sur l'architecture Orbit.";
     assert!(ApeironNullGate::validate_with_glossary(src, valid_trans, Some(&glossary)).is_ok());
 
-    // Corrupted brand term (e.g. LLM translated "Apeiron" into "Infini")
-    let bad_trans = "Propulsé par Ptyktos sur l'architecture Infini.";
+    // Corrupted brand term (e.g. a provider translated "Orbit" into "Infini")
+    let bad_trans = "Propulsé par Acme sur l'architecture Infini.";
     let err = ApeironNullGate::validate_with_glossary(src, bad_trans, Some(&glossary)).unwrap_err();
     assert!(matches!(err, glossa::engine::gate::GateViolation::GlossaryViolation { .. }));
 

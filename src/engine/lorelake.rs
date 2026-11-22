@@ -1,8 +1,8 @@
 //! Lorelake & S3 Data Lake Integration Bridge.
 //!
-//! Connects ptyktos-lingo to Lorelake (`http://127.0.0.1:3910`) and S3-compatible content-addressed stores.
-//! Streams translation memory chunks directly to the lake without Git-LFS overhead or disk amplification.
-//! Maintains strict memory bounds (< 15 MB RSS) and streaming iterators to prevent OOM errors.
+//! Pushes lockfile entries to an HTTP object store, one JSON object per coordinate
+//! (`PUT <endpoint>/<bucket>/<prefix>/<coord>.json`), and reads them back by coordinate.
+//! The default endpoint is `http://127.0.0.1:3910`.
 
 use crate::ir::coord::ApeironCoord;
 use crate::lockfile::LingoLock;

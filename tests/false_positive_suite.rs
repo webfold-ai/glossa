@@ -1,13 +1,15 @@
-//! Zero-Regression Verification & Ground Truth Parity Suite.
+//! False-positive, roundtrip, lockfile-merge, integrity-gate and codegen tests.
 //!
-//! Provides irrefutable mathematical and empirical proof of:
-//! 1. Zero False Positives: Code identifiers, CSS classes, IDs, URLs, and imports are never extracted.
-//! 2. 100% True Positive Recall: UI strings, translatable attributes, and inline calls are 100% extracted.
-//! 3. Extraction Accuracy: Translation calls like `{t('Order')}` extract `"Order"`, NEVER `"{Order}"`.
-//! 4. Roundtrip Invariance (Diff == 0): Parse -> Emit -> Parse produces exact identity across all formats.
-//! 5. Commutative Lockfile Merge: 10 different merge orderings yield bit-identical lockfiles (0 Git conflicts).
-//! 6. Adversarial Integrity Gate: 100% of slot drops, tag corruptions, and XSS attacks are rejected.
-//! 7. Zero-Runtime Codegen: Generates 100% standalone, dependency-free TypeScript and Rust message accessors.
+//! What each test asserts:
+//! 1. Code identifiers, CSS classes, IDs, URLs and imports in the fixtures are not extracted.
+//! 2. UI strings, translatable attributes and inline calls in the fixtures are extracted.
+//! 3. Translation calls like `{t('Order')}` extract `"Order"`, not `"{Order}"`.
+//! 4. Parse -> emit -> parse returns the same catalog for the formats covered here.
+//! 5. Merging lockfiles in several orders produces identical lockfiles.
+//! 6. The integrity gate rejects the listed slot drops, tag corruptions and injected markup.
+//! 7. Generated TypeScript and Rust accessors contain no external runtime imports.
+//!
+//! These are fixed fixtures: they check the listed cases, not every possible input.
 
 use glossa::codegen::{generate_code, CodegenOptions, CodegenTarget};
 use glossa::emitters::resource;
@@ -23,10 +25,10 @@ use glossa::parsers::vue::extract_vue;
 use std::collections::BTreeMap;
 
 // =========================================================================
-// 1. NEGATIVE TESTING: ZERO FALSE POSITIVES (Code/Attrs Not Extracted)
+// 1. NEGATIVE TESTING: CODE/ATTRS ARE NOT EXTRACTED
 // =========================================================================
 #[test]
-fn test_zero_false_positives_in_code_and_markup() {
+fn test_no_false_positives_in_code_and_markup() {
     let source_code = r#"
     import React, { useState, useEffect } from 'react';
     import { useRouter } from 'next/router';
@@ -137,7 +139,7 @@ fn test_translation_calls_extracted_as_clean_text_not_slots() {
 }
 
 // =========================================================================
-// 3. BIDIRECTIONAL ROUNDTRIP INVARIANCE (Zero Drift Across All Formats)
+// 3. ROUNDTRIP: PARSE -> EMIT -> PARSE
 // =========================================================================
 #[test]
 fn test_roundtrip_invariance_all_catalog_formats() {
@@ -186,7 +188,7 @@ fn test_roundtrip_invariance_all_catalog_formats() {
 // 4. COMMUTATIVE LOCKFILE MERGE: PERMUTATION ORDER INVARIANCE
 // =========================================================================
 #[test]
-fn test_lockfile_merge_order_invariance_proves_zero_git_conflicts() {
+fn test_lockfile_merge_order_invariance() {
     use glossa::ir::coord::ApeironCoord;
 
     fn make_branch(items: &[(&str, &str, &str, &str)]) -> LingoLock {
@@ -249,7 +251,7 @@ fn test_lockfile_merge_order_invariance_proves_zero_git_conflicts() {
     merge_3.merge(branch_c.clone());
     merge_3.merge(branch_a.clone());
 
-    // Mathematical equivalence assertion: all entries and locales must match across all permutations
+    // All entries and locales must match across all tested permutations
     assert_eq!(merge_1.entries.len(), merge_2.entries.len());
     assert_eq!(merge_2.entries.len(), merge_3.entries.len());
 
@@ -272,10 +274,10 @@ fn test_lockfile_merge_order_invariance_proves_zero_git_conflicts() {
 }
 
 // =========================================================================
-// 5. ADVERSARIAL INTEGRITY GATE: 100% REJECTION OF CORRUPTED TRANSLATIONS
+// 5. INTEGRITY GATE: CORRUPTED TRANSLATIONS ARE REJECTED
 // =========================================================================
 #[test]
-fn test_adversarial_integrity_gate_exhaustive_catch_rate() {
+fn test_integrity_gate_rejects_corrupted_translations() {
     let source = "Hello <0>{username}</0>, you have <1>{unreadCount}</1> new messages.";
 
     // Attack / Corruption 1: Dropped slot {unreadCount}
@@ -302,10 +304,10 @@ fn test_adversarial_integrity_gate_exhaustive_catch_rate() {
 }
 
 // =========================================================================
-// 6. ZERO-RUNTIME CODEGEN INTEGRITY
+// 6. CODEGEN HAS NO RUNTIME IMPORTS
 // =========================================================================
 #[test]
-fn test_codegen_emits_valid_zero_dependency_accessors() {
+fn test_codegen_emits_dependency_free_accessors() {
     use glossa::ir::coord::ApeironCoord;
 
     let mut lock = LingoLock::new();
@@ -336,7 +338,7 @@ fn test_codegen_emits_valid_zero_dependency_accessors() {
     assert!(ts_code.contains("export type Locale = \"en\" | \"es\";"));
     assert!(ts_code.contains("export const m = {"));
     assert!(ts_code.contains("user: string | number"));
-    assert!(!ts_code.contains("import "), "Codegen MUST have zero external runtime imports (0kB bundle)");
+    assert!(!ts_code.contains("import "), "Codegen output must have no external runtime imports");
 
     // 2. Rust Codegen
     let rs_opts = CodegenOptions {

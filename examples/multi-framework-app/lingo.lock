@@ -6,7 +6,7 @@
       "coord": 3725811649908832756,
       "source_hash": 3725811649908832756,
       "canonical_text": "<0>Team Overview</0><1>Team {teamName} currently manages {projectCount} projects.</1>",
-      "context": "Svelte template in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/components/Dashboard.svelte:6",
+      "context": "Svelte template in examples/multi-framework-app/src/components/Dashboard.svelte:6",
       "locales": {
         "de": {
           "translated_text": "[DE] <0>Team Overview</0><1>Team {teamName} currently manages {projectCount} projects.</1>",
@@ -42,7 +42,7 @@
       "coord": 4290718697912637839,
       "source_hash": 4290718697912637839,
       "canonical_text": "<0><0>Order Confirmation</0><1>Hello {customer_name}, your order has been received.</1></0>",
-      "context": "HTML in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/templates/email.html:2",
+      "context": "HTML in examples/multi-framework-app/src/templates/email.html:2",
       "locales": {
         "de": {
           "translated_text": "[DE] <0><0>Order Confirmation</0><1>Hello {customer_name}, your order has been received.</1></0>",
@@ -78,7 +78,7 @@
       "coord": 4675708673806772264,
       "source_hash": 4675708673806772264,
       "canonical_text": "offline",
-      "context": "JSON in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/lingo.json",
+      "context": "JSON in examples/multi-framework-app/lingo.json",
       "locales": {
         "de": {
           "translated_text": "[DE] offline",
@@ -114,7 +114,7 @@
       "coord": 6007101141408479825,
       "source_hash": 6007101141408479825,
       "canonical_text": "Experience the next evolution of multi-framework development. Read our <0>quickstart guide</0> to begin your journey.",
-      "context": "Markdown in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/docs/welcome.md:7",
+      "context": "Markdown in examples/multi-framework-app/src/docs/welcome.md:7",
       "locales": {
         "de": {
           "translated_text": "[DE] Experience the next evolution of multi-framework development. Read our <0>quickstart guide</0> to begin your journey.",
@@ -150,7 +150,7 @@
       "coord": 6343084814903408078,
       "source_hash": 6343084814903408078,
       "canonical_text": "<0>GlobalApp</0><1><0>Welcome back, {userName}! You have {notificationCount} notifications.</0><1></1><2>Visit <0>Settings</0></2></1>",
-      "context": "JSX in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/components/Header.tsx:5",
+      "context": "JSX in examples/multi-framework-app/src/components/Header.tsx:5",
       "locales": {
         "de": {
           "translated_text": "[DE] <0>GlobalApp</0><1><0>Welcome back, {userName}! You have {notificationCount} notifications.</0><1></1><2>Visit <0>Settings</0></2></1>",
@@ -186,7 +186,7 @@
       "coord": 8300213773967952959,
       "source_hash": 8300213773967952959,
       "canonical_text": "json",
-      "context": "JSON in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/lingo.json",
+      "context": "JSON in examples/multi-framework-app/lingo.json",
       "locales": {
         "de": {
           "translated_text": "[DE] json",
@@ -222,7 +222,7 @@
       "coord": 8384396977786910940,
       "source_hash": 8384396977786910940,
       "canonical_text": "locales",
-      "context": "JSON in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/lingo.json",
+      "context": "JSON in examples/multi-framework-app/lingo.json",
       "locales": {
         "de": {
           "translated_text": "[DE] locales",
@@ -294,7 +294,7 @@
       "coord": 12687674576948918265,
       "source_hash": 12687674576948918265,
       "canonical_text": "Welcome to Sovereign Cloud",
-      "context": "Markdown in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/docs/welcome.md:5",
+      "context": "Markdown in examples/multi-framework-app/src/docs/welcome.md:5",
       "locales": {
         "de": {
           "translated_text": "[DE] Welcome to Sovereign Cloud",
@@ -330,7 +330,7 @@
       "coord": 13781168655537611762,
       "source_hash": 13781168655537611762,
       "canonical_text": "en",
-      "context": "JSON in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/lingo.json",
+      "context": "JSON in examples/multi-framework-app/lingo.json",
       "locales": {
         "de": {
           "translated_text": "[DE] en",
@@ -366,7 +366,7 @@
       "coord": 13990643290727720955,
       "source_hash": 13990643290727720955,
       "canonical_text": "<0>User Profile</0><1>Logged in as {user_name}. Your subscription is active.</1><2>Upgrade to <0>Pro</0></2>",
-      "context": "Vue template in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/components/UserProfile.vue:2",
+      "context": "Vue template in examples/multi-framework-app/src/components/UserProfile.vue:2",
       "locales": {
         "de": {
           "translated_text": "[DE] <0>User Profile</0><1>Logged in as {user_name}. Your subscription is active.</1><2>Upgrade to <0>Pro</0></2>",
@@ -438,7 +438,7 @@
       "coord": 18237465872076511591,
       "source_hash": 18237465872076511591,
       "canonical_text": "Deploy anywhere with zero configuration.",
-      "context": "Markdown in /home/ctown/projects/ptyktos-lingo/examples/multi-framework-app/src/docs/welcome.md:9",
+      "context": "Markdown in examples/multi-framework-app/src/docs/welcome.md:9",
       "locales": {
         "de": {
           "translated_text": "[DE] Deploy anywhere with zero configuration.",

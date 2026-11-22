@@ -7,12 +7,9 @@ on:
       - '**/*.lock'
       - 'Cargo.toml'
       - '**/Cargo.toml'
-      - 'native/**'
       - 'src/**'
-      - 'upstream/**'
-      - 'extensions/**'
   push:
-    branches: [main, 'release/**']
+    branches: [master]
   schedule:
     # Run daily at 06:13 UTC. RUSTSEC advisories land throughout the day;
     # a stale green run is the worst outcome (no one sees the CVE).
@@ -27,11 +24,6 @@ permissions:
   contents: read
 
 jobs:
-  # Three coordinated gates — all must pass for the workflow to succeed.
-  # caretakers (Ptyktos/caretaker) consumes these three signals and the
-  # upstream evidence JSON for the supply-chain-control decision; a red
-  # signal on any of them blocks release-pr from merging.
-
   audit:
     name: cargo audit (rustsec)
     runs-on: ubuntu-latest
@@ -73,33 +65,3 @@ jobs:
           name: glossa-sbom
           path: glossa.sbom.json
           retention-days: 90
-
-  # caretakers-specific bridge — the cross-repo compliance signal that
-  # Ptyktos/caretaker consumes. caretakers records the SBOM + the audit
-  # + the deny result into the supply-chain evidence stream; the release
-  # gate reads them at merge-time.
-  evidence:
-    name: Emit supply-chain evidence (for caretakers)
-    runs-on: ubuntu-latest
-    if: always()
-    needs: [audit, deny, sbom]
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
-      - name: Build evidence payload
-        run: |
-          mkdir -p evidence
-          {
-            echo "{"
-            echo "  \"event\": \"ptyktos.supply_chain.audit\","
-            echo "  \"ts\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\","
-            echo "  \"repo\": \"Ptyktos/glossa\","
-            echo "  \"audit\": \"${{ needs.audit.result }}\","
-            echo "  \"deny\": \"${{ needs.deny.result }}\","
-            echo "  \"sbom_path\": \"glossa.sbom.json\""
-            echo "}"
-          } > evidence/supply-chain.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: supply-chain-evidence
-          path: evidence/supply-chain.json

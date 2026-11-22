@@ -1,51 +1,51 @@
 ---
 name: glossa
-description: Universal sovereign multi-framework localization compiler and CI/CD verification engine (measured 4.8x-12.6x faster, ~45x lower memory drop-in replacement for Lingo.dev, Tolgee, Inlang, and Crowdin). Automates string extraction across React, Vue, Svelte, Mobile, and Backend, with Zero-Fault Integrity Gate verification, monoidal lockfiles, zero-runtime codegen, and in-context visual editing.
+description: Localization tool for extracting translatable strings from source code and catalogs, translating missing entries through a configurable provider, checking translations with an integrity gate, and writing locale catalogs.
 ---
 
-# Glossa Agent Skill
+# Glossa agent skill
 
-Use this skill when localizing web applications (React/Next.js, Vue/Nuxt, Svelte, Angular, Solid, Astro), mobile apps (iOS Swift, Android Kotlin, Flutter Dart), backend services (Python Django/FastAPI, Go, Ruby on Rails, PHP Laravel), or enterprise catalogs (JSON, YAML, PO, Fluent, Android XML, Apple Strings, ARB, XLIFF, Properties).
+Use this skill when a project needs its user-facing strings extracted, translated or checked. Glossa
+has extractors for React/JSX, Vue, Svelte, HTML templates, Markdown, translation-call patterns in
+Python, Go, Ruby, PHP, Swift, Angular and Astro sources, and catalogs in JSON, YAML, PO, Fluent,
+Android XML, iOS `.strings`, Flutter ARB, Properties, XLIFF and CSV.
 
-## The 3-Liner Project Quickstart
-
-To immediately automate localization in any repository:
+## Quickstart
 
 ```bash
-# 1. Install or download standalone binary
-curl -fsSL https://ptyktos.com/install.sh | bash
-
-# 2. Initialize project (auto-detects React, Vue, Svelte, Flutter, Python, Go, etc.)
+cargo install --git https://github.com/webfold-ai/glossa glossa   # installs `glossa` and `lingo`
 glossa init --locales es,fr,de,ja
-
-# 3. Extract & verify coverage in CI
 glossa extract && glossa check --ci
 ```
 
-*Note: Glossa ships with a drop-in `lingo` binary alias. Commands can be invoked with either `glossa <command>` or `lingo <command>` interchangeably.*
+`lingo` is the same CLI under a second name, so existing `lingo.json` / `lingo.lock` projects can keep
+using it.
 
-## Available CLI Commands
+## Commands
 
 | Command | Purpose |
 |---|---|
-| `glossa init` | Auto-detects framework, generates `glossa.json` (or updates existing `lingo.json`) |
-| `glossa extract` | Universal single-pass sweep extracting all translatable strings into canonical IR (`CanonicalTerm`) |
-| `glossa translate` | Translates missing keys via Anthropic, OpenAI, DeepSeek, Ollama, or Offline provider with Integrity Gate |
-| `glossa check --ci` | CI check: emits GitHub error annotations (`::error ...::`), generates `$GITHUB_STEP_SUMMARY`, exits 1 if keys missing |
-| `glossa codegen` | Generates 0-runtime type-safe compiled message accessors (`--target typescript` or `--target rust`) |
-| `glossa visual` | Launches local embedded In-Context Visual Studio on `http://localhost:3920` for Alt+Click translation |
-| `glossa import` | Drop-in migration: automatically converts configs from Lingo.dev, Inlang, Tolgee, Crowdin, or i18next |
-| `glossa diff` | Zero-network translation diff showing added, updated, and missing strings |
-| `glossa pseudo` | Generates pseudo-localized strings with +35% expansion to test UI clipping before paying for LLM tokens |
-| `glossa sync` | Synchronizes lockfile translations into locale catalog files (`.json`, `.yml`, `.po`, `.ftl`, `.xml`, `.strings`, `.arb`, `.xlf`) |
-| `glossa bench --spbench` | Runs SPBench performance micro-benchmarks with p50/p90/p99 percentiles and 3-column verification |
-| `glossa mcp` | Starts JSON-RPC 2.0 Model Context Protocol stdio server for Cursor, Copilot, and Claude Code |
-| `glossa lorelake` | Synchronizes translation memory with Lorelake S3 content-addressed lakehouse (port 3910) |
-| `glossa export` | Exports parallel corpora for HuggingFace Hub (`--format jsonl`) or FLORES/WMT benchmarks (`--format tsv`) |
+| `glossa init` | Detects the framework, imports settings from other i18n tools' config files if present, writes `glossa.json` |
+| `glossa extract` | Scans the project and updates the lockfile (`glossa.lock`, or an existing `lingo.lock`) |
+| `glossa translate` | Translates missing entries with `anthropic`, `openai`, `deepseek`, `ollama` or `offline`; each result goes through the integrity gate |
+| `glossa check --ci` | Exits 1 if any configured locale is missing a translation; with `--format=github` or in CI prints `::error` annotations and writes `$GITHUB_STEP_SUMMARY` |
+| `glossa diff` | Shows pending translations from the lockfile, with no network access |
+| `glossa pseudo` | Writes pseudo-localized strings (accents and about 35% expansion) to test UI layout |
+| `glossa sync` | Writes locale catalogs from the lockfile in the configured output format |
+| `glossa codegen` | Generates TypeScript or Rust message accessors (`--target typescript` or `--target rust`) |
+| `glossa visual` | Starts the local in-context editor on `127.0.0.1:3920` |
+| `glossa import` | Detects and imports locale settings from Lingo.dev, Inlang, Tolgee, Crowdin, Lokalise or i18next config files |
+| `glossa mcp` | Starts an MCP server on stdio |
+| `glossa export` | Exports translations as JSONL (`--format jsonl`) or TSV (`--format tsv`) |
+| `glossa lorelake --action push` | Pushes lockfile entries to an HTTP object store |
+| `glossa bench` | Times Glossa's own extraction, lockfile, gate and emitter code on this machine |
 
-## Core Safeguards & Guarantees
+## Integrity gate
 
-- **Zero-Fault Integrity Gate**: All translations MUST conserve variable slots (`{user}`, `{{count}}`) and numbered markup tags (`<0>...</0>`). If an LLM drops a placeholder or injects unsafe HTML, the gate rejects the item in 1.8 µs.
-- **Zero Git Merge Conflicts**: `glossa.lock` / `lingo.lock` merges via monoidal commutativity (`Table::fuse`), completely eliminating Git merge conflicts across parallel feature branches.
-- **Content-Addressed Coordinate Caching**: Strings are mapped into deterministic 64-bit coordinates (`ContentCoord`). Moving strings across frameworks or refactoring whitespace retains existing translations with **zero LLM re-spends** — the dollar savings scale with how much cross-framework duplication a given repo has.
-- **Zero-Regression Proof Suite**: Verified across 61 test suites ensuring 0 false positives in code/CSS/URLs, 100% UI recall, and exact roundtrip serialization.
+A translation is rejected if it drops or adds a `{slot}`, unbalances or reorders numbered tags
+(`<0>...</0>`), contains script or event-handler markup, or changes a protected glossary term.
+
+## Lockfile and coordinates
+
+Each string gets a deterministic 64-bit content coordinate, so the same text extracted from different
+file types maps to one lockfile entry. Lockfiles merge with `Table::fuse`, which is order-independent.

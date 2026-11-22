@@ -1,6 +1,4 @@
-//! Universal Code Extractor for Backend, Mobile, and Template Languages.
-//!
-//! Theorem: `adapt = fromTerm ∘ universalLift` (Sanguine/UniversalAdapter).
+//! Code extractor for translation-call patterns in backend, mobile and template languages.
 //! Extracts localized strings and message keys across:
 //! - Python (Django, Flask, FastAPI, gettext `_("...")`)
 //! - Go (`i18n.T("...")`, `gotext.Get("...")`)

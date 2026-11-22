@@ -22,7 +22,7 @@ input. Treat parser bugs here the same as any other code that parses
 attacker-influenced input.
 
 `glossa translate` sends extracted strings to whichever AI provider you
-configure (`anthropic`, `openai`, `deepseek`, `ollama`, `ptyktos-api`, or
+configure (`anthropic`, `openai`, `deepseek`, `ollama`, or
 `offline`) — this is a real outbound network call carrying source-derived
 text, authenticated with an API key you supply (`src/config/mod.rs`,
 `src/engine/providers/`). Don't point it at a provider you don't want to see
@@ -32,12 +32,12 @@ your source strings, and don't commit the API key alongside project config.
 (`src/visual/mod.rs`), default port 3920 — it never binds a non-loopback
 address, so it isn't reachable off the local machine by default.
 
-`glossa.lock`/`lingo.lock` merges (`src/lockfile/`) are a commutative
-monoid fuse over untrusted lockfile content from every branch being merged —
+`glossa.lock`/`lingo.lock` merges (`src/lockfile/`) combine lockfile content
+from every branch being merged. Treat that content as untrusted input:
 malformed lockfile input should fail the merge, not silently corrupt state.
 
 ## Dependency and release security
 
-Rust dependencies are recorded in `Cargo.lock`. Pull requests and scheduled
-workflows run RustSec advisory checks (`cargo audit`), cargo-deny policy
+Rust dependencies are recorded in `Cargo.lock`. The repository includes
+workflows for RustSec advisory checks (`cargo audit`), cargo-deny policy
 checks, and SBOM generation (see `.github/workflows/supply-chain.yml`).

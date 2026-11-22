@@ -2,8 +2,8 @@
 //!
 //! Glossa is the only component in the stack that actually knows the *true* language
 //! of a piece of content (translation catalogs are keyed by locale — that's the job).
-//! This module exposes that knowledge in a form a separate crate (e.g. `ptyktos-qa`,
-//! a static WCAG accessibility auditor for rendered HTML) can cross-reference against
+//! This module exposes that knowledge in a form a separate crate (for example an accessibility
+//! auditor for rendered HTML) can cross-reference against
 //! a page's declared `<html lang="...">` / `lang="..."` attributes, to check:
 //!
 //! - **WCAG SC 3.1.1 Language of Page (A)**: does the page's declared `lang` actually
@@ -44,7 +44,7 @@
 //! (extraction, emitters, and the visual-editor server all stop at source position or
 //! literal text matching).
 //!
-//! A consumer (such as ptyktos-qa, which audits *rendered* HTML) therefore cannot use
+//! A consumer (such as an auditor of *rendered* HTML) therefore cannot use
 //! `SourceLocation` as a DOM selector directly. To turn a [`LocaleRegion`] into a DOM
 //! `lang`-attribute check, a caller needs to bridge source position to rendered output
 //! itself, e.g. by:

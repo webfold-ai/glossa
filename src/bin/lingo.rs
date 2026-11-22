@@ -1,6 +1,4 @@
-//! Drop-in Lingo.dev compatibility binary for `glossa`.
-//!
-//! Enables drop-in replacement without modifying existing scripts or CI/CD pipelines.
+//! `lingo` binary: the same CLI as `glossa` under a second name.
 
 #[tokio::main]
 async fn main() {

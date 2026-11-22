@@ -1,7 +1,7 @@
 //! The Apeiron Lockfile (`lingo.lock`).
 //!
 //! Stores invariant coordinates, source content hashes, and per-locale translated terms.
-//! Provides order-free commutative merging (`Table::fuse`) and sub-millisecond delta computation.
+//! Provides order-independent merging (`Table::fuse`) and computes the translations that are still missing.
 
 use crate::ir::coord::ApeironCoord;
 use crate::ir::term::ApeironCatalog;

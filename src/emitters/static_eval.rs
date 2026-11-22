@@ -1,8 +1,7 @@
-//! Zero-Runtime Static Pre-Compiler.
+//! Static pre-compiler.
 //!
 //! Replaces translatable units in source files directly with the translated terms
-//! for a target locale at compile time. Eliminates client-side i18n bundle size
-//! and runtime lookup overhead entirely.
+//! for a target locale, so the output needs no runtime message lookup.
 
 use crate::ir::term::ApeironTerm;
 use std::collections::BTreeMap;
