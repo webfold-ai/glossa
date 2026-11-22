@@ -945,7 +945,7 @@ fn run_spbench_suite(
 
     let report = SpbenchReport {
         suite: "PTYKTOS-LINGO SPBENCH PERFORMANCE & REGRESSION SUITE".to_string(),
-        timestamp: chrono::Utc::now().to_rfc3339(),
+        timestamp: crate::lockfile::now_rfc3339(),
         environment: SpbenchEnv {
             os: std::env::consts::OS.to_string(),
             arch: std::env::consts::ARCH.to_string(),

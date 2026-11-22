@@ -5,13 +5,44 @@
 
 use crate::ir::coord::ApeironCoord;
 use crate::ir::term::ApeironCatalog;
-use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
 pub const CURRENT_LOCKFILE_VERSION: u32 = 1;
+
+/// The current UTC time as an RFC 3339 string with nanosecond precision and a `+00:00` offset
+/// (`2026-11-22T01:02:03.004005006+00:00`), the layout `chrono::Utc::now().to_rfc3339()` produced.
+/// Fixed width, so the string comparison in the locale merge orders it chronologically.
+/// Std only: the `chrono` crate is unmaintained (RUSTSEC-2026-0543) and was used for nothing else.
+pub fn now_rfc3339() -> String {
+    let since_epoch = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    format_rfc3339_utc(since_epoch.as_secs(), since_epoch.subsec_nanos())
+}
+
+fn format_rfc3339_utc(secs: u64, nanos: u32) -> String {
+    // Civil-from-days (Howard Hinnant), valid for the whole proleptic Gregorian range used here.
+    let days = (secs / 86_400) as i64;
+    let rem = secs % 86_400;
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!(
+        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}.{nanos:09}+00:00",
+        rem / 3_600,
+        rem % 3_600 / 60,
+        rem % 60
+    )
+}
 
 /// Per-locale translation record.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -45,7 +76,7 @@ impl Default for LingoLock {
     fn default() -> Self {
         Self {
             version: CURRENT_LOCKFILE_VERSION,
-            updated_at: Utc::now().to_rfc3339(),
+            updated_at: now_rfc3339(),
             entries: BTreeMap::new(),
         }
     }
@@ -123,7 +154,7 @@ impl LingoLock {
                 self.entries.insert(coord, other_entry);
             }
         }
-        self.updated_at = Utc::now().to_rfc3339();
+        self.updated_at = now_rfc3339();
     }
 
     /// Sync extracted catalog items into the lockfile, creating new entries as needed.
@@ -150,7 +181,7 @@ impl LingoLock {
                 );
             }
         }
-        self.updated_at = Utc::now().to_rfc3339();
+        self.updated_at = now_rfc3339();
     }
 
     /// Compute pending translations needed across target locales.
@@ -194,17 +225,29 @@ impl LingoLock {
                     translated_text,
                     translated_hash: trans_hash,
                     provider: provider.to_string(),
-                    updated_at: Utc::now().to_rfc3339(),
+                    updated_at: now_rfc3339(),
                     quality_score,
                 },
             );
-            self.updated_at = Utc::now().to_rfc3339();
+            self.updated_at = now_rfc3339();
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn rfc3339_formatting_matches_known_instants() {
+        use super::format_rfc3339_utc;
+        assert_eq!(format_rfc3339_utc(0, 0), "1970-01-01T00:00:00.000000000+00:00");
+        assert_eq!(format_rfc3339_utc(951_782_400, 5), "2000-02-29T00:00:00.000000005+00:00");
+        assert_eq!(
+            format_rfc3339_utc(1_795_309_323, 123_456_789),
+            "2026-11-22T01:02:03.123456789+00:00"
+        );
+        assert_eq!(format_rfc3339_utc(4_107_542_399, 0), "2100-02-28T23:59:59.000000000+00:00");
+    }
+
     use super::*;
 
     #[test]
