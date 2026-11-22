@@ -19,18 +19,7 @@
 [advisories]
 version = 2
 yanked = "deny"
-ignore = [
-    # rsa Marvin-attack timing side-channel (sqlx-mysql transitive; no upstream fix).
-    "RUSTSEC-2023-0071",
-    # rustls-webpki reachable-panic in CRL parse (tonic/reqwest tls transitive).
-    "RUSTSEC-2026-0104",
-    # dlopen_derive unmaintained (fastembed transitive).
-    "RUSTSEC-2023-0051",
-    # rustls-pemfile unmaintained (tonic/reqwest transitive).
-    "RUSTSEC-2025-0134",
-    # rand unsound with custom logger in rng() (we don't install one).
-    "RUSTSEC-2026-0097",
-]
+ignore = []
 
 [licenses]
 version = 2
@@ -81,12 +70,3 @@ allow-git = [
     "https://github.com/orhun/*",
 ]
 
-# Local path-deps are the canonical Ptyktos substrate path; the [patch]
-# section of Cargo.toml maps all git-dep fetches to local paths. Block
-# crates-io fetches of substrate crates explicitly:
-unknown-git = "deny"
-
-# caretakers routes Ptyktos's release-management through caretaker
-# (forge-neutral maintenance control plane); the Ptyktos forge
-# (`https://github.com/Ptyktos/*`) is the trusted source.
-allow-org = "Ptyktos"
